@@ -157,7 +157,31 @@ fn tray_generate(app: &AppHandle, kind: &str) {
 }
 
 // ---------- 트레이 메뉴 빌드 ----------
+/// keychain 항목이 있고 vault 가 잠겨 있다면 silently 복원.
+/// 이벤트 emit 도 refresh_tray 재귀 호출도 하지 않는 경량 helper —
+/// 메뉴 빌드 같은 핫패스에서 사용. 결과적으로 사용자가 명시적으로
+/// 잠갔어도 keychain 이 켜져 있으면 트레이는 계속 동작합니다.
+fn restore_from_keychain_silent(app: &AppHandle) {
+    let need = {
+        let state = app.state::<Mutex<AppState>>();
+        let guard = state.lock().expect("AppState mutex poisoned");
+        !guard.vault.is_unlocked()
+    };
+    if !need || !keychain::has_entry() {
+        return;
+    }
+    if let Ok(key) = keychain::load() {
+        let state = app.state::<Mutex<AppState>>();
+        let mut guard = state.lock().expect("AppState mutex poisoned");
+        let _ = guard.vault.unlock_with_key(key);
+    }
+}
+
 fn build_tray_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
+    // 트레이 메뉴는 keychain 이 켜진 상태라면 명시적 잠금 후에도
+    // silently 복원해서 목록·복사가 계속 동작하도록 함.
+    restore_from_keychain_silent(app);
+
     let (unlocked, entries) = {
         let state = app.state::<Mutex<AppState>>();
         let guard = state.lock().expect("AppState mutex poisoned");
@@ -249,10 +273,16 @@ fn handle_tray_menu(app: &AppHandle, id: &str) {
         "tray-show" => show_main_window(app),
         "tray-quick" => toggle_quick_window(app),
         "tray-lock" => {
+            // lock_vault 커맨드와 동일한 의미: keychain 자동 해제가 켜져 있으면
+            // UI 만 잠그고 vault 는 메모리에 유지, 그렇지 않으면 진짜 잠금.
+            let keychain_on = keychain::has_entry();
             {
                 let state = app.state::<Mutex<AppState>>();
                 let mut guard = state.lock().expect("AppState mutex poisoned");
-                guard.vault.lock();
+                guard.ui_locked = true;
+                if !keychain_on {
+                    guard.vault.lock();
+                }
             }
             refresh_tray(app);
             let _ = app.emit("bp:status-changed", ());

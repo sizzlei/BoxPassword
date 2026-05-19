@@ -116,12 +116,13 @@
       async function reload() {
         try {
           let status = await invoke("vault_status");
-          if (!status.unlocked) {
-            // Keychain 에 키가 있으면 silently 잠금 해제 시도
+          // Quick Search 는 트레이와 동일하게 동작 — UI 잠금 상태여도 vault 가
+          // 실제로 unlock 되어 있거나 keychain 에 키가 있으면 사용 가능해야 함.
+          if (!status.vault_unlocked) {
             try { await invoke("keychain_try_unlock"); } catch (_) {}
             status = await invoke("vault_status");
           }
-          if (!status.unlocked) {
+          if (!status.vault_unlocked) {
             entries = [];
             $("list").innerHTML = `<div class="q-empty">Vault가 잠겨 있습니다.<br/>메인 창에서 먼저 잠금을 해제하세요.</div>`;
             return;

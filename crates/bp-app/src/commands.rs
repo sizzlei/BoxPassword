@@ -42,9 +42,37 @@ pub fn app_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
 
+/// UI 가 받아 보는 vault 상태. `unlocked` 는 UI 가 그릴 화면을 결정하는 데
+/// 쓰이고, `vault_unlocked` 는 트레이 / Quick Search 처럼 백그라운드에서
+/// 동작하는 컨텍스트가 vault 를 실제로 사용할 수 있는지 판단할 때 씁니다.
+/// keychain 자동 해제 + UI 만 잠근 상태에서는
+///   - unlocked = false (UI 는 잠금 화면)
+///   - vault_unlocked = true (트레이 / Quick Search 는 동작)
+#[derive(Serialize)]
+pub struct AppVaultStatus {
+    pub initialized: bool,
+    pub unlocked: bool,
+    pub vault_unlocked: bool,
+    pub ui_locked: bool,
+    pub path: String,
+}
+
+fn make_app_status(inner: VaultStatus, ui_locked: bool) -> AppVaultStatus {
+    let vault_unlocked = inner.unlocked;
+    AppVaultStatus {
+        initialized: inner.initialized,
+        unlocked: vault_unlocked && !ui_locked,
+        vault_unlocked,
+        ui_locked,
+        path: inner.path,
+    }
+}
+
 #[tauri::command]
-pub fn vault_status(state: State<'_, Mutex<AppState>>) -> Result<VaultStatus, String> {
-    lock(&state).vault.status().map_err(err)
+pub fn vault_status(state: State<'_, Mutex<AppState>>) -> Result<AppVaultStatus, String> {
+    let guard = lock(&state);
+    let inner = guard.vault.status().map_err(err)?;
+    Ok(make_app_status(inner, guard.ui_locked))
 }
 
 #[tauri::command]
@@ -52,11 +80,13 @@ pub fn initialize_vault(
     app: AppHandle,
     mut password: String,
     state: State<'_, Mutex<AppState>>,
-) -> Result<VaultStatus, String> {
+) -> Result<AppVaultStatus, String> {
     let result = {
         let mut guard = lock(&state);
         guard.vault.initialize(&password).map_err(err)?;
-        guard.vault.status().map_err(err)
+        guard.ui_locked = false;
+        let inner = guard.vault.status().map_err(err)?;
+        Ok::<AppVaultStatus, String>(make_app_status(inner, guard.ui_locked))
     };
     password.zeroize();
     if result.is_ok() { crate::refresh_tray(&app); }
@@ -68,11 +98,15 @@ pub fn unlock_vault(
     app: AppHandle,
     mut password: String,
     state: State<'_, Mutex<AppState>>,
-) -> Result<VaultStatus, String> {
+) -> Result<AppVaultStatus, String> {
     let result = {
         let mut guard = lock(&state);
+        // 이미 keychain 으로 silently unlock 된 상태에서 UI lock 만 걸려 있을 수
+        // 있으므로, 마스터 비번이 맞는지는 항상 검증(unlock 재호출).
         guard.vault.unlock(&password).map_err(err)?;
-        guard.vault.status().map_err(err)
+        guard.ui_locked = false;
+        let inner = guard.vault.status().map_err(err)?;
+        Ok::<AppVaultStatus, String>(make_app_status(inner, guard.ui_locked))
     };
     password.zeroize();
     if result.is_ok() { crate::refresh_tray(&app); }
@@ -80,14 +114,22 @@ pub fn unlock_vault(
 }
 
 #[tauri::command]
-pub fn lock_vault(app: AppHandle, state: State<'_, Mutex<AppState>>) -> Result<VaultStatus, String> {
-    let result = {
+pub fn lock_vault(app: AppHandle, state: State<'_, Mutex<AppState>>) -> Result<AppVaultStatus, String> {
+    // keychain 자동 해제가 켜진 상태라면 vault.lock() 까지 가지 않고 UI 만
+    // 잠금 상태로 표시 → 트레이 / Quick Search 가 계속 동작.
+    // 키체인이 없다면 진짜로 vault.lock().
+    let keychain_on = crate::keychain::has_entry();
+    let status = {
         let mut guard = lock(&state);
-        guard.vault.lock();
-        guard.vault.status().map_err(err)
+        guard.ui_locked = true;
+        if !keychain_on {
+            guard.vault.lock();
+        }
+        let inner = guard.vault.status().map_err(err)?;
+        make_app_status(inner, guard.ui_locked)
     };
     crate::refresh_tray(&app);
-    result
+    Ok(status)
 }
 
 #[tauri::command]
