@@ -1,11 +1,10 @@
 name: build
 
+# 일반 커밋 / PR 에서는 동작하지 않음.
+# 태그(v*) 푸시 또는 수동 dispatch 일 때만 lint → test → 번들 → release 흐름 실행.
 on:
   push:
-    branches: [main, release/**]
     tags: ["v*"]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -47,13 +46,12 @@ jobs:
           cargo test -p bp-otp --no-fail-fast
 
   # ────────────────────────────────────────────────
-  # 태그(v*)나 main 푸시일 때만 실제 번들 생성.
   # macOS는 .app/.dmg, Windows는 .msi/.exe.
+  # 위 트리거(tag / dispatch) 자체가 게이트라 추가 if 불필요.
   # ────────────────────────────────────────────────
   bundle:
     name: bundle (${{ matrix.os }})
     needs: check
-    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
       matrix:
@@ -85,8 +83,9 @@ jobs:
       - name: Build (Tauri bundle)
         working-directory: crates/bp-app
         env:
-          # 코드사인 없이 ad-hoc.  실제 배포는 Apple / Windows 인증서 시크릿을 주입.
-          APPLE_SIGNING_IDENTITY: ""
+          # "-" 는 macOS codesign 의 ad-hoc 서명 표기.
+          # 빈 문자열을 넣으면 빈 keychain identity 로 sign 시도되어 실패함.
+          APPLE_SIGNING_IDENTITY: "-"
         run: cargo tauri build --target ${{ matrix.target }}
 
       - name: Collect artifacts
