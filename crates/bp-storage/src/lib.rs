@@ -7,6 +7,10 @@
 use std::path::{Path, PathBuf};
 
 use bp_core::{EntryId, EntrySummary, EntryVersionSummary, GroupRow, NewEntry};
+
+// TOTP 행 / 레코드 별칭 — type_complexity lint 회피.
+type TotpRow = (Option<Vec<u8>>, Option<String>, Option<i64>, Option<i64>);
+type TotpRecord = (Vec<u8>, Option<String>, Option<u32>, Option<u32>);
 use bp_crypto::{aead, derive_master_key, KdfParams, VaultKey, KEY_LEN, SALT_LEN};
 use rusqlite::{params, Connection, OptionalExtension};
 use zeroize::Zeroize;
@@ -611,13 +615,14 @@ impl Vault {
         self.reveal_totp_full(id).map(|opt| opt.map(|(seed, _, _, _)| seed))
     }
 
+    // TOTP DB 행 → 메모리 표현 (clippy::type_complexity 회피)
+    // 행: (sealed_cipher, algorithm, period, digits)
+    // 결과: (seed, algorithm, period, digits)
+
     /// 시드 + (algorithm, period, digits) 반환. config 누락 시 None.
-    pub fn reveal_totp_full(
-        &self,
-        id: &EntryId,
-    ) -> StorageResult<Option<(Vec<u8>, Option<String>, Option<u32>, Option<u32>)>> {
+    pub fn reveal_totp_full(&self, id: &EntryId) -> StorageResult<Option<TotpRecord>> {
         let session = self.require_unlocked()?;
-        let row: Option<(Option<Vec<u8>>, Option<String>, Option<i64>, Option<i64>)> = self
+        let row: Option<TotpRow> = self
             .conn
             .query_row(
                 "SELECT totp_seed_cipher, totp_algorithm, totp_period, totp_digits
@@ -1106,7 +1111,7 @@ mod tests {
 
         // 정상 복호
         let restored = Vault::decode_backup(&backup_bytes, "hunter2hunter").unwrap();
-        assert!(restored.len() > 0);
+        assert!(!restored.is_empty());
 
         // 다른 경로에 복원 후 동일 항목 확인
         let new_path = dir.path().join("restored.db");
@@ -1133,10 +1138,7 @@ mod tests {
         // 헤더 첫 바이트 1개 변조 → AEAD 인증 실패해 InvalidMaster.
         let header_offset = 8;
         backup[header_offset] ^= 0x80;
-        assert!(matches!(
-            Vault::decode_backup(&backup, "hunter2hunter"),
-            Err(_)
-        ));
+        assert!(Vault::decode_backup(&backup, "hunter2hunter").is_err());
     }
 
     #[test]

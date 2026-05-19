@@ -187,7 +187,7 @@ fn build_tray_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
 
     // 최근 서브메뉴 — 클릭 즉시 패스워드 복사.
     let mut sorted = entries.clone();
-    sorted.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+    sorted.sort_by_key(|e| std::cmp::Reverse(e.updated_at.clone()));
     let recent: Vec<&bp_core::EntrySummary> = sorted.iter().take(8).collect();
     let mut recent_sub = SubmenuBuilder::new(app, "🕒 최근");
     if !unlocked {

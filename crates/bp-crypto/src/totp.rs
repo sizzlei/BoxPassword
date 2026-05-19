@@ -16,18 +16,15 @@ use sha2::{Sha256, Sha512};
 pub const DEFAULT_PERIOD: u64 = 30;
 pub const DEFAULT_DIGITS: u32 = 6;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum Algorithm {
+    #[default]
     #[serde(rename = "SHA1")]
     Sha1,
     #[serde(rename = "SHA256")]
     Sha256,
     #[serde(rename = "SHA512")]
     Sha512,
-}
-
-impl Default for Algorithm {
-    fn default() -> Self { Algorithm::Sha1 }
 }
 
 impl Algorithm {

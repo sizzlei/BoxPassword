@@ -965,15 +965,15 @@
         </select>
         <div style="color: var(--muted); font-size: 11px; margin-top: 6px">마우스·키 입력이 없으면 지정 시간 뒤에 Vault가 자동 잠금됩니다.</div>
 
-        <label style="margin-top: 16px">macOS Keychain 자동 잠금 해제</label>
+        <label style="margin-top: 16px">OS 자격 증명 저장소 자동 잠금 해제</label>
         <div style="display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 7px">
           <div style="display: flex; align-items: center; gap: 8px">
             <input type="checkbox" id="set-keychain" style="width: auto" />
-            <label for="set-keychain" style="margin: 0; color: var(--fg); font-size: 12px">Vault key 를 OS Keychain 에 보관 — 마스터 비번 없이 트레이 사용</label>
+            <label for="set-keychain" style="margin: 0; color: var(--fg); font-size: 12px">Vault key 를 운영체제 보안 저장소에 보관 — 마스터 비번 없이 트레이/Quick Search 사용</label>
           </div>
           <div style="color: var(--muted); font-size: 11px">
-            첫 저장 시 macOS 가 권한 다이얼로그를 한 번 띄웁니다. 끄면 Keychain 항목이 즉시 삭제됩니다.
-            보안 모델은 OS 로그인 / Touch ID 에 위임됩니다.
+            macOS → Keychain (Touch ID 가능) · Windows → Credential Manager · Linux → Secret Service.
+            저장소는 OS별로 따로 관리되며, 끄면 즉시 항목이 삭제됩니다. 보안 모델은 OS 로그인 인증에 위임됩니다.
           </div>
         </div>
 
