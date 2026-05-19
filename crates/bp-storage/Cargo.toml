@@ -1,0 +1,24 @@
+[package]
+name = "bp-storage"
+description = "SQLite-backed vault storage for BoxPassword"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+bp-core = { path = "../bp-core" }
+bp-crypto = { path = "../bp-crypto" }
+rusqlite = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+time = { workspace = true }
+uuid = { workspace = true }
+zeroize = { workspace = true }
+base64 = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"

@@ -1,0 +1,24 @@
+[package]
+name = "bp-crypto"
+description = "Argon2id KDF + AES-256-GCM AEAD primitives for BoxPassword"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+argon2 = { workspace = true }
+aes-gcm = { workspace = true }
+rand_core = { workspace = true }
+getrandom = { workspace = true }
+zeroize = { workspace = true }
+subtle = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+hmac = { workspace = true }
+sha1 = { workspace = true }
+sha2 = { workspace = true }
+data-encoding = { workspace = true }

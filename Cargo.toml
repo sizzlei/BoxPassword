@@ -1,0 +1,81 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/bp-core",
+    "crates/bp-crypto",
+    "crates/bp-passgen",
+    "crates/bp-storage",
+    "crates/bp-otp",
+    "crates/bp-app",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.78"
+license = "MIT"
+authors = ["Andy <sangjae.park@kurlycorp.com>"]
+repository = "https://github.com/kurlycorp/BoxPassword"
+publish = false
+
+[workspace.dependencies]
+# --- 도메인/유틸 ---
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+time = { version = "0.3", features = ["serde", "serde-well-known", "macros", "formatting", "parsing"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# --- 메모리 보호 ---
+zeroize = { version = "1.8", features = ["zeroize_derive"] }
+
+# --- 암호화 ---
+argon2 = "0.5"
+aes-gcm = "0.10"
+rand = "0.8"
+rand_core = { version = "0.6", features = ["getrandom"] }
+getrandom = "0.2"
+subtle = "2"
+sha2 = "0.10"
+sha1 = "0.10"
+hmac = "0.12"
+data-encoding = "2"
+
+# --- 저장소 ---
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# --- 데스크톱 통합 ---
+arboard = "3"
+dirs = "5"
+image = { version = "0.25", default-features = false, features = ["png"] }
+tauri-plugin-global-shortcut = "2"
+
+# --- 가져오기 ---
+csv = "1"
+
+# --- OS Keychain ---
+keyring = "3"
+
+# --- 강도 평가 ---
+zxcvbn = "3"
+
+# --- Tauri 2.x ---
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-build = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-notification = "2"
+
+# --- 기타 ---
+base64 = "0.22"
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"

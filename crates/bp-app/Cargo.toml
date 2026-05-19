@@ -1,0 +1,42 @@
+[package]
+name = "bp-app"
+description = "Tauri host binary for BoxPassword"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish.workspace = true
+default-run = "bp-app"
+
+[build-dependencies]
+tauri-build = { workspace = true }
+
+[dependencies]
+bp-core = { path = "../bp-core" }
+bp-crypto = { path = "../bp-crypto" }
+bp-passgen = { path = "../bp-passgen" }
+bp-storage = { path = "../bp-storage" }
+bp-otp = { path = "../bp-otp" }
+
+tauri = { workspace = true }
+tauri-plugin-dialog = { workspace = true }
+tauri-plugin-global-shortcut = { workspace = true }
+tauri-plugin-notification = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+arboard = { workspace = true }
+dirs = { workspace = true }
+image = { workspace = true }
+sha2 = { workspace = true }
+time = { workspace = true }
+zeroize = { workspace = true }
+csv = { workspace = true }
+keyring = { workspace = true }
+data-encoding = { workspace = true }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

@@ -1,0 +1,116 @@
+name: build
+
+on:
+  push:
+    branches: [main, release/**]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # ────────────────────────────────────────────────
+  # 모든 PR/푸시에 적용되는 라이트 체크.
+  # ────────────────────────────────────────────────
+  check:
+    name: lint + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Install Linux build deps (tauri)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev libssl-dev libgtk-3-dev \
+            libayatana-appindicator3-dev librsvg2-dev
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace --no-fail-fast
+
+  # ────────────────────────────────────────────────
+  # 태그(v*)나 main 푸시일 때만 실제 번들 생성.
+  # macOS는 .app/.dmg, Windows는 .msi/.exe.
+  # ────────────────────────────────────────────────
+  bundle:
+    name: bundle (${{ matrix.os }})
+    needs: check
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact: macos-arm64
+          - os: macos-13
+            target: x86_64-apple-darwin
+            artifact: macos-intel
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: windows-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install tauri-cli
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Build (Tauri bundle)
+        working-directory: crates/bp-app
+        env:
+          # 코드사인 없이 ad-hoc.  실제 배포는 Apple / Windows 인증서 시크릿을 주입.
+          APPLE_SIGNING_IDENTITY: ""
+        run: cargo tauri build --target ${{ matrix.target }}
+
+      - name: Collect artifacts
+        shell: bash
+        run: |
+          set -e
+          mkdir -p dist
+          # macOS
+          find target -type d -name "BoxPassword.app" -exec cp -R {} dist/ \; || true
+          find target -type f \( -name "*.dmg" -o -name "*.msi" -o -name "*-setup.exe" \) -exec cp {} dist/ \; || true
+          ls -la dist || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: boxpassword-${{ matrix.artifact }}
+          path: dist/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  # ────────────────────────────────────────────────
+  # 태그 푸시 시 GitHub Release 자동 생성.
+  # ────────────────────────────────────────────────
+  release:
+    name: github release
+    needs: bundle
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: List artifacts
+        run: ls -laR dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/**/*.dmg
+            dist/**/*.msi
+            dist/**/*-setup.exe
+          generate_release_notes: true

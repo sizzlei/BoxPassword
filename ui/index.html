@@ -1,0 +1,2720 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BoxPassword</title>
+    <style>
+      :root {
+        color-scheme: dark light;
+        --bg: #0d1117;
+        --bg-2: #11161d;
+        --panel: #161c25;
+        --panel-2: #1c232d;
+        --panel-3: #232c38;
+        --line: #2a3340;
+        --line-2: #3b4756;
+        --fg: #e8edf3;
+        --fg-dim: #c2cad4;
+        --muted: #8c97a3;
+        --muted-2: #5e6773;
+        --accent: #ef4d4d;
+        --accent-2: #ff6f6f;
+        --accent-3: #b91c1c;
+        --gold: #e0a93a;
+        --danger: #ff8a8a;
+        --ok: #6cd07a;
+        --warn: #e6c34a;
+        --shadow-modal: 0 24px 80px rgba(0, 0, 0, .55);
+        --shadow-toast: 0 8px 28px rgba(0, 0, 0, .45);
+        --shadow-card: 0 1px 0 rgba(255,255,255,.02), 0 6px 18px rgba(0,0,0,.18);
+        --gradient-brand: linear-gradient(135deg, #ef4d4d, #b91c1c);
+        font-family: -apple-system, "SF Pro Text", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+      }
+      [data-theme="light"] {
+        color-scheme: light;
+        --bg: #faf6f7;
+        --bg-2: #ffffff;
+        --panel: #ffffff;
+        --panel-2: #f6eced;
+        --panel-3: #ebd9dc;
+        --line: #ead5d8;
+        --line-2: #d8b8be;
+        --fg: #2a151a;
+        --fg-dim: #4b2c33;
+        --muted: #836068;
+        --muted-2: #ad8a91;
+        --accent: #dc2626;
+        --accent-2: #ef4444;
+        --accent-3: #991b1b;
+        --gold: #b07a18;
+        --danger: #b91c1c;
+        --ok: #1f9a52;
+        --warn: #b07b00;
+        --shadow-modal: 0 24px 60px rgba(80, 12, 20, .18);
+        --shadow-toast: 0 8px 28px rgba(80, 12, 20, .18);
+        --shadow-card: 0 1px 0 rgba(255,255,255,.4), 0 6px 18px rgba(80,12,20,.07);
+        --gradient-brand: linear-gradient(135deg, #dc2626, #991b1b);
+      }
+      /* 부드러운 색상 전환 (테마 변경 시) */
+      html, body { transition: background-color .2s ease, color .2s ease; }
+      .auth-card, .topbar, .sidebar, .list, .detail, .modal, .toast,
+      .fields, .versions, .gen, .stat, .health-section, .clipboard-pill, .pill,
+      input, button, textarea, select { transition: background-color .15s ease, color .15s ease, border-color .15s ease; }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; padding: 0; height: 100%;
+        background: var(--bg); color: var(--fg);
+        -webkit-font-smoothing: antialiased;
+        font-size: 13px;
+      }
+      button { font: inherit; cursor: pointer; }
+      input, textarea {
+        font: inherit; color: var(--fg);
+        background: var(--panel-2); border: 1px solid var(--line);
+        border-radius: 7px; padding: 8px 10px;
+      }
+      input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+      .hidden { display: none !important; }
+
+      /* ===== Setup / Lock (centered card) ===== */
+      .centered { min-height: 100vh; display: grid; place-items: center; padding: 40px; }
+      .auth-card {
+        width: 100%; max-width: 420px;
+        background: var(--panel); border: 1px solid var(--line);
+        border-radius: 14px; padding: 32px;
+      }
+      .auth-card h1 { margin: 0 0 6px; font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+      .auth-card p.lead { margin: 0 0 20px; color: var(--muted); font-size: 13px; }
+      .auth-art { display: flex; justify-content: center; margin-bottom: 14px; }
+      .auth-art svg { filter: drop-shadow(0 8px 20px rgba(220, 38, 38, .28)); }
+      .auth-card label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 6px; font-weight: 500; }
+      .auth-card input { width: 100%; }
+      .auth-card .btn-row { margin-top: 18px; }
+      .auth-card .msg { margin-top: 10px; min-height: 16px; font-size: 12px; }
+      .msg.err { color: var(--danger); }
+      .msg.ok { color: var(--ok); }
+
+      .btn-primary {
+        width: 100%;
+        background: var(--accent); color: white; border: 1px solid var(--accent);
+        border-radius: 8px; padding: 10px 14px; font-weight: 600;
+      }
+      .btn-primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+      .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+      .btn-ghost {
+        background: transparent; color: var(--fg-dim); border: 1px solid var(--line);
+        border-radius: 7px; padding: 6px 10px; font-size: 12px;
+      }
+      .btn-ghost:hover { background: var(--panel-2); color: var(--fg); }
+
+      .btn-icon {
+        background: transparent; border: none; color: var(--muted);
+        padding: 6px; border-radius: 6px;
+        display: inline-flex; align-items: center; justify-content: center;
+      }
+      .btn-icon:hover { background: var(--panel-3); color: var(--fg); }
+      /* 아이콘 path가 클릭 영역을 갉아먹지 않도록 항상 부모 버튼이 이벤트 타깃이 되게 함. */
+      .btn-icon svg, .btn-icon path, .btn-icon rect, .btn-icon circle { pointer-events: none; }
+
+      .icon { width: 16px; height: 16px; stroke-width: 1.75; }
+      .icon-sm { width: 14px; height: 14px; stroke-width: 1.75; }
+
+      /* ===== Main 3-pane shell ===== */
+      .shell {
+        display: grid;
+        grid-template-columns: 220px 340px 1fr;
+        grid-template-rows: 44px 1fr;
+        grid-template-areas:
+          "topbar topbar topbar"
+          "sidebar list detail";
+        height: 100vh;
+      }
+      .topbar {
+        grid-area: topbar;
+        display: flex; align-items: center; gap: 12px;
+        padding: 0 14px;
+        background: var(--bg-2);
+        border-bottom: 1px solid var(--line);
+        -webkit-app-region: drag;
+      }
+      .brand {
+        font-weight: 700; letter-spacing: -.01em;
+        display: inline-flex; align-items: center; gap: 8px;
+      }
+      .brand .logo {
+        width: 24px; height: 24px; flex-shrink: 0;
+        filter: drop-shadow(0 1px 2px rgba(0,0,0,.18));
+      }
+      .topbar .spacer { flex: 1; }
+      .topbar .meta { color: var(--muted-2); font-size: 11px; -webkit-app-region: no-drag; }
+      .topbar .btn-ghost { -webkit-app-region: no-drag; }
+      .pill {
+        display: inline-flex; align-items: center; gap: 6px;
+        background: var(--panel-2); border: 1px solid var(--line);
+        color: var(--muted); font-size: 11px;
+        padding: 3px 9px; border-radius: 999px;
+      }
+      .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+      .pill.warn .dot { background: var(--warn); }
+      .pill.danger .dot { background: var(--danger); }
+      .clipboard-pill {
+        display: none;
+        align-items: center; gap: 8px;
+        background: var(--panel-2); border: 1px solid var(--line);
+        color: var(--fg-dim); font-size: 11px;
+        padding: 4px 10px 4px 8px; border-radius: 999px;
+        -webkit-app-region: no-drag;
+        margin-right: 6px;
+      }
+      .clipboard-pill.show { display: inline-flex; }
+      .clipboard-pill .ring {
+        width: 14px; height: 14px; border-radius: 50%;
+        background: conic-gradient(var(--gold) calc(var(--pct, 100) * 1%), var(--line) 0);
+        display: inline-block;
+      }
+      .clipboard-pill button {
+        background: transparent; border: none; color: var(--muted);
+        cursor: pointer; padding: 0; font-size: 11px;
+      }
+      .clipboard-pill button:hover { color: var(--danger); }
+
+      .sidebar {
+        grid-area: sidebar;
+        background: var(--bg-2);
+        border-right: 1px solid var(--line);
+        display: flex; flex-direction: column;
+        min-height: 0;
+      }
+      .sidebar-main { flex: 1; overflow-y: auto; padding: 12px 8px; }
+      .sidebar-foot { padding: 10px 10px 12px; border-top: 1px solid var(--line); background: var(--bg-2); }
+      .vault-card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px 12px;
+        display: flex; flex-direction: column; gap: 4px;
+      }
+      .vault-card .status { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--fg); font-weight: 600; }
+      .vault-card .status .dot { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); background: var(--ok); }
+      .vault-card .status.locked .dot { background: var(--danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 25%, transparent); }
+      .vault-card .meta { color: var(--muted); font-size: 11px; display: flex; gap: 8px; align-items: center; }
+      .vault-card .meta .sep { color: var(--muted-2); }
+      .vault-card .path { color: var(--muted-2); font-size: 10px; word-break: break-all; line-height: 1.35; font-family: ui-monospace, Menlo, monospace; }
+      .color-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+      .btn-tiny {
+        background: transparent; border: 1px solid var(--line);
+        color: var(--muted); padding: 1px 7px; border-radius: 6px;
+        font-size: 12px; cursor: pointer; line-height: 1.4;
+      }
+      .btn-tiny:hover { background: var(--panel-2); color: var(--fg); }
+      .nav li.empty-li { color: var(--muted-2); cursor: default; font-size: 11px; padding: 4px 10px; }
+      .nav li.empty-li:hover { background: transparent; color: var(--muted-2); }
+      .palette { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+      .swatch {
+        width: 24px; height: 24px; border-radius: 50%;
+        border: 2px solid transparent; cursor: pointer; padding: 0;
+        transition: transform .1s ease, border-color .15s ease;
+      }
+      .swatch:hover { transform: scale(1.1); }
+      .swatch.active { border-color: var(--fg); }
+      .group-row {
+        display: grid; grid-template-columns: auto 1fr auto auto auto;
+        gap: 8px; align-items: center;
+        padding: 8px 8px; border-radius: 8px;
+        border: 1px solid var(--line);
+        margin-bottom: 6px;
+      }
+      .group-row .gname {
+        outline: none; border-radius: 4px; padding: 1px 4px; min-width: 60px;
+      }
+      .group-row .gname[contenteditable="true"] { background: var(--panel-2); }
+      .group-row .gcount { color: var(--muted); font-size: 11px; }
+      .group-pill {
+        display: inline-flex; align-items: center; gap: 6px;
+        background: var(--panel-2); border: 1px solid var(--line);
+        color: var(--fg-dim); font-size: 11px;
+        padding: 3px 10px 3px 8px; border-radius: 999px;
+        cursor: pointer; user-select: none;
+        margin-left: 8px;
+        transition: background-color .12s ease;
+      }
+      .group-pill:hover { background: var(--panel-3); }
+      .group-pill.empty { color: var(--muted-2); }
+      .sidebar .sec { color: var(--muted-2); text-transform: uppercase; letter-spacing: .06em; font-size: 10px; margin: 8px 10px; }
+      .nav { list-style: none; padding: 0; margin: 0; }
+      .nav li {
+        display: flex; align-items: center; gap: 8px;
+        padding: 7px 10px; border-radius: 7px; color: var(--fg-dim);
+        cursor: pointer; user-select: none;
+      }
+      .nav li:hover { background: var(--panel-2); color: var(--fg); }
+      .nav li.active { background: var(--panel-3); color: var(--fg); }
+      .nav li .count { margin-left: auto; color: var(--muted-2); font-size: 11px; }
+
+      .list {
+        grid-area: list;
+        background: var(--bg);
+        border-right: 1px solid var(--line);
+        display: flex; flex-direction: column;
+        overflow: hidden;
+      }
+      .list-head {
+        padding: 10px 12px;
+        display: flex; gap: 8px; align-items: center;
+        border-bottom: 1px solid var(--line);
+        background: var(--bg-2);
+      }
+      .list-head input.search {
+        flex: 1; background: var(--panel-2); border-color: var(--line);
+        padding: 7px 10px; font-size: 12px;
+      }
+      .list-scroll { flex: 1; overflow-y: auto; }
+      .item {
+        padding: 11px 14px; border-bottom: 1px solid var(--line);
+        cursor: pointer; user-select: none;
+        display: grid; grid-template-columns: 32px 1fr auto; gap: 10px; align-items: center;
+        position: relative;
+      }
+      .item:hover { background: var(--panel); }
+      .item.active { background: var(--panel-2); border-left: 2px solid var(--accent); padding-left: 12px; }
+      .item .avatar {
+        width: 32px; height: 32px; border-radius: 7px;
+        background: var(--panel-3);
+        display: inline-flex; align-items: center; justify-content: center;
+        font-weight: 700; color: var(--fg-dim); font-size: 13px;
+        position: relative;
+      }
+      .item .avatar .star {
+        position: absolute; top: -4px; right: -4px;
+        font-size: 10px; color: var(--warn);
+        text-shadow: 0 0 2px var(--bg);
+      }
+      .item .title { font-weight: 600; color: var(--fg); display: flex; align-items: center; gap: 6px; }
+      .item .sub { color: var(--muted); font-size: 11px; margin-top: 1px;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .item .hover-actions {
+        display: none; align-items: center; gap: 2px;
+      }
+      .item:hover .hover-actions { display: inline-flex; }
+      .item .hover-actions .btn-icon { padding: 4px; }
+      .item .hover-actions .btn-icon:hover { background: var(--panel-3); color: var(--accent-2); }
+      .list-empty { padding: 30px 16px; color: var(--muted); text-align: center; font-size: 12px; }
+
+      .detail {
+        grid-area: detail;
+        overflow-y: auto;
+        padding: 28px 32px;
+      }
+      .detail-empty {
+        height: 100%; display: flex; align-items: center; justify-content: center;
+        flex-direction: column; gap: 10px; text-align: center;
+        color: var(--muted); font-size: 13px;
+      }
+      .detail-empty .empty-art { opacity: .55; margin-bottom: 6px; }
+      .detail-empty h3 { margin: 0; color: var(--fg-dim); font-size: 17px; font-weight: 600; letter-spacing: -.005em; }
+      .detail-empty .kbd-hint { display: inline-flex; gap: 4px; align-items: center; color: var(--muted-2); font-size: 11px; margin-top: 6px; }
+      .detail-empty .kbd-hint kbd { background: var(--panel-2); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 1px 5px; font-family: ui-monospace, Menlo, monospace; font-size: 10px; color: var(--fg-dim); }
+      .detail h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+      .detail .sub-title { color: var(--muted); font-size: 12px; margin-bottom: 24px; }
+      .fields { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+      .field {
+        display: grid; grid-template-columns: 100px 1fr auto;
+        gap: 12px; align-items: center;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      .field:last-child { border-bottom: none; }
+      .field .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+      .field .value {
+        font-size: 13px; color: var(--fg);
+        word-break: break-all;
+        cursor: pointer;
+        padding: 4px 6px; margin: -4px -6px;
+        border-radius: 6px;
+      }
+      .field .value:hover { background: var(--panel-3); }
+      .field .value.mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+      .field .value.empty { color: var(--muted-2); cursor: default; }
+      .field .value.empty:hover { background: transparent; }
+      .field .value.link { color: var(--accent-2); }
+      .field .actions { display: inline-flex; gap: 4px; }
+      .toast {
+        position: fixed; bottom: 24px; left: 50%;
+        transform: translateX(-50%) translateY(12px);
+        background: var(--panel); border: 1px solid var(--line); color: var(--fg);
+        padding: 9px 14px; border-radius: 10px;
+        font-size: 12px; opacity: 0; pointer-events: none;
+        transition: opacity .22s ease, transform .22s cubic-bezier(.2,.7,.2,1);
+        box-shadow: var(--shadow-toast);
+        display: inline-flex; align-items: center; gap: 8px;
+      }
+      .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+      .toast.err { border-color: var(--danger); color: var(--danger); }
+      .toast.ok { border-color: var(--ok); color: var(--ok); }
+      .toast .ico { width: 14px; height: 14px; flex-shrink: 0; }
+
+      /* 스크롤바 톤 정리 */
+      ::-webkit-scrollbar { width: 10px; height: 10px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: var(--panel-3); border-radius: 6px; border: 2px solid var(--bg); }
+      ::-webkit-scrollbar-thumb:hover { background: var(--line-2); }
+
+      /* 사이드바 active li 트랜지션 */
+      .nav li { transition: background-color .12s ease, color .12s ease, transform .08s ease; }
+      .nav li:active { transform: scale(.985); }
+
+      /* 강도 바 부드럽게 */
+      .bar > span { transition: width .25s cubic-bezier(.2,.7,.2,1), background .15s ease; }
+
+      .meta-grid { margin-top: 18px; color: var(--muted); font-size: 12px; }
+      .meta-grid div { padding: 4px 0; }
+      /* 건강 검진 대시보드 */
+      .health h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+      .health .lead { color: var(--muted); font-size: 12px; margin: 0 0 22px; }
+      .stat-grid {
+        display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+        margin-bottom: 22px;
+      }
+      .stat {
+        background: var(--panel); border: 1px solid var(--line);
+        border-radius: 12px; padding: 14px 16px;
+      }
+      .stat .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+      .stat .value { font-size: 22px; font-weight: 700; margin-top: 4px; color: var(--fg); }
+      .stat .sub { color: var(--muted); font-size: 11px; margin-top: 2px; }
+      .stat.ok .value { color: var(--ok); }
+      .stat.warn .value { color: var(--warn); }
+      .stat.danger .value { color: var(--danger); }
+      .health-section {
+        background: var(--panel); border: 1px solid var(--line);
+        border-radius: 12px; padding: 16px; margin-bottom: 14px;
+      }
+      .health-section h3 { margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--fg); display: flex; align-items: center; gap: 8px; }
+      .health-section h3 .chip { font-size: 11px; background: var(--panel-3); color: var(--muted); padding: 2px 8px; border-radius: 999px; font-weight: 500; }
+      .health-section h3.warn::before { content: "⚠"; color: var(--warn); }
+      .health-section h3.danger::before { content: "⚠"; color: var(--danger); }
+      .health-row {
+        display: flex; align-items: center; gap: 10px;
+        padding: 7px 4px; border-radius: 6px; cursor: pointer;
+        color: var(--fg-dim); font-size: 13px;
+      }
+      .health-row:hover { background: var(--panel-2); color: var(--fg); }
+      .health-row .meta { margin-left: auto; color: var(--muted); font-size: 11px; }
+      .health-empty { color: var(--muted); font-size: 12px; padding: 6px 4px; }
+      .reused-group {
+        background: var(--panel-2); border: 1px solid var(--line);
+        border-radius: 8px; padding: 8px 10px; margin-bottom: 8px;
+      }
+      .reused-group .gh { color: var(--warn); font-size: 11px; margin-bottom: 4px; font-weight: 600; }
+
+      /* 노트 카드 */
+      .notes-card {
+        background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+        padding: 14px 16px;
+      }
+      .notes-card textarea {
+        width: 100%; min-height: 80px; resize: vertical;
+        background: var(--panel-2); border: 1px solid var(--line);
+        color: var(--fg); border-radius: 7px; padding: 10px 12px;
+        font: inherit; font-size: 13px; line-height: 1.5;
+      }
+      .notes-card .row {
+        display: flex; align-items: center; justify-content: flex-end;
+        gap: 8px; margin-top: 8px;
+      }
+      .notes-card .saved-hint { color: var(--muted-2); font-size: 11px; margin-right: auto; }
+
+      /* TOTP 카드 */
+      .totp-card {
+        background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+        padding: 14px 16px;
+      }
+      .totp-row {
+        display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center;
+      }
+      .totp-code {
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        font-size: 26px; font-weight: 700;
+        letter-spacing: .12em; color: var(--gold);
+      }
+      .totp-meta { color: var(--muted); font-size: 11px; margin-top: 4px; }
+      .totp-ring {
+        width: 36px; height: 36px; border-radius: 50%;
+        background: conic-gradient(var(--gold) calc(var(--pct, 100) * 1%), var(--line) 0);
+        display: grid; place-items: center;
+      }
+      .totp-ring > span {
+        width: 26px; height: 26px; border-radius: 50%;
+        background: var(--panel); display: grid; place-items: center;
+        font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums;
+      }
+      .totp-empty { color: var(--muted); font-size: 12px; }
+      .totp-actions { display: inline-flex; gap: 6px; }
+      .detail-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 24px; }
+      .detail-head .meta { flex: 1; }
+      .detail-head .meta h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+      .detail-head .meta .sub-title { color: var(--muted); font-size: 12px; }
+      .detail-head .actions { display: flex; gap: 6px; }
+      .section-h { margin: 26px 0 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-size: 10px; }
+      .versions { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+      .version {
+        display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center;
+        padding: 11px 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      .version:last-child { border-bottom: none; }
+      .version .v-tag { font-weight: 700; font-size: 12px; color: var(--fg); min-width: 32px; }
+      .version .v-meta { color: var(--muted); font-size: 12px; }
+      .version .v-reason { color: var(--fg-dim); font-size: 12px; margin-top: 1px; }
+      .version.current { background: rgba(79,140,255,.06); }
+      .badge-cur {
+        display: inline-block; margin-left: 6px;
+        background: var(--accent); color: white; font-size: 10px;
+        padding: 1px 6px; border-radius: 4px; vertical-align: middle;
+      }
+
+      /* ===== Modal ===== */
+      .backdrop {
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,.55);
+        display: grid; place-items: center;
+        z-index: 50;
+        opacity: 0; pointer-events: none;
+        transition: opacity .18s ease;
+      }
+      [data-theme="light"] .backdrop { background: rgba(15, 23, 42, .35); }
+      .backdrop.show { opacity: 1; pointer-events: auto; }
+      .modal {
+        width: 520px; max-width: calc(100% - 40px);
+        max-height: calc(100vh - 80px);
+        overflow-y: auto;
+        background: var(--panel); border: 1px solid var(--line);
+        border-radius: 14px; box-shadow: var(--shadow-modal);
+        padding: 24px;
+        transform: translateY(8px) scale(.985);
+        opacity: 0;
+        transition: transform .22s cubic-bezier(.2,.7,.2,1), opacity .18s ease;
+      }
+      .backdrop.show .modal { transform: none; opacity: 1; }
+      .modal h3 { margin: 0 0 16px; font-size: 17px; font-weight: 700; }
+      .modal label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 6px; font-weight: 500; }
+      .modal input { width: 100%; }
+      .modal .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .modal .footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+      .modal .strength { margin-top: 6px; }
+
+      /* ===== Strength bar ===== */
+      .strength { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); }
+      .bar { width: 100px; height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+      .bar > span { display: block; height: 100%; width: 0; transition: width .15s, background .15s; }
+      .s0 .bar > span { background: var(--danger); width: 20%; }
+      .s1 .bar > span { background: var(--danger); width: 40%; }
+      .s2 .bar > span { background: var(--warn); width: 60%; }
+      .s3 .bar > span { background: var(--ok); width: 80%; }
+      .s4 .bar > span { background: var(--ok); width: 100%; }
+
+      /* ===== Generator panel ===== */
+      .gen { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-top: 8px; }
+      .gen .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+      .gen .tabs button { padding: 5px 11px; background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; font-size: 12px; }
+      .gen .tabs button.active { background: var(--accent); color: white; border-color: var(--accent); }
+      .gen .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; align-items: center; }
+      .gen .check { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-dim); }
+      .gen .check input { width: auto; }
+      .gen label { display: block; font-size: 11px; color: var(--muted); margin: 0 0 4px; }
+      .gen input[type="range"] { width: 100%; padding: 0; }
+      .gen .candidate {
+        display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;
+        padding: 8px; border-bottom: 1px solid var(--line);
+      }
+      .gen .candidate:last-child { border-bottom: none; }
+      .gen .candidate .pw { font-family: ui-monospace, Menlo, monospace; font-size: 12px; word-break: break-all; }
+      .gen .candidate .apply { padding: 4px 10px; font-size: 11px; }
+    </style>
+  </head>
+
+  <body>
+    <!-- ===== Shared SVG defs (brand mark) ===== -->
+    <svg width="0" height="0" style="position:absolute; pointer-events:none" aria-hidden="true">
+      <defs>
+        <linearGradient id="bpw-grad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#f06060"/>
+          <stop offset="55%" stop-color="#c02430"/>
+          <stop offset="100%" stop-color="#600e18"/>
+        </linearGradient>
+        <radialGradient id="bpw-glow" cx="0.5" cy="0.14" r="0.7">
+          <stop offset="0%" stop-color="#ffffff" stop-opacity="0.32"/>
+          <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="bpw-door" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#424650"/>
+          <stop offset="100%" stop-color="#1e2128"/>
+        </linearGradient>
+        <linearGradient id="bpw-gold" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#f5c860"/>
+          <stop offset="100%" stop-color="#b48224"/>
+        </linearGradient>
+        <linearGradient id="bpw-chrome" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#c8ccd6"/>
+          <stop offset="100%" stop-color="#5e626e"/>
+        </linearGradient>
+        <symbol id="boxpassword-mark" viewBox="0 0 32 32">
+          <rect width="32" height="32" rx="7.2" fill="url(#bpw-grad)"/>
+          <rect width="32" height="32" rx="7.2" fill="url(#bpw-glow)"/>
+          <!-- Vault door -->
+          <rect x="8.5" y="7.5" width="15" height="18" rx="2.4" fill="url(#bpw-door)"/>
+          <rect x="9.4" y="8.4" width="13.2" height="16.2" rx="1.8" fill="none" stroke="#6e7280" stroke-width="0.25" opacity="0.55"/>
+          <!-- Corner bolts -->
+          <circle cx="10.4" cy="9.4" r="0.55" fill="#e0e2e8"/>
+          <circle cx="21.6" cy="9.4" r="0.55" fill="#e0e2e8"/>
+          <circle cx="10.4" cy="23.6" r="0.55" fill="#e0e2e8"/>
+          <circle cx="21.6" cy="23.6" r="0.55" fill="#e0e2e8"/>
+          <!-- Dial outer ring + tick (12시 표시만) -->
+          <circle cx="16" cy="14.6" r="4" fill="#242830"/>
+          <line x1="16" y1="10.8" x2="16" y2="11.4" stroke="#e0e2e8" stroke-width="0.3" stroke-linecap="round"/>
+          <line x1="16" y1="17.8" x2="16" y2="18.4" stroke="#e0e2e8" stroke-width="0.3" stroke-linecap="round"/>
+          <line x1="12.2" y1="14.6" x2="12.8" y2="14.6" stroke="#e0e2e8" stroke-width="0.3" stroke-linecap="round"/>
+          <line x1="19.2" y1="14.6" x2="19.8" y2="14.6" stroke="#e0e2e8" stroke-width="0.3" stroke-linecap="round"/>
+          <!-- Gold accent disc + hub -->
+          <circle cx="16" cy="14.6" r="2.6" fill="url(#bpw-gold)"/>
+          <circle cx="16" cy="14.6" r="0.7" fill="#fafafa"/>
+          <circle cx="16" cy="14.6" r="0.3" fill="#242830"/>
+          <!-- Indicator notch (gold triangle at top of dial) -->
+          <polygon points="16,10.6 15.45,11.4 16.55,11.4" fill="#f5c860"/>
+          <!-- Handle bar -->
+          <rect x="13" y="22.2" width="6" height="1.4" rx="0.7" fill="url(#bpw-chrome)"/>
+          <circle cx="16" cy="22.9" r="0.55" fill="#fafafa"/>
+        </symbol>
+      </defs>
+    </svg>
+
+    <!-- ===== Setup (first run) ===== -->
+    <section class="centered hidden" id="view-setup">
+      <div class="auth-card">
+        <div class="auth-art" aria-hidden="true">
+          <svg width="80" height="80"><use href="#boxpassword-mark"/></svg>
+        </div>
+        <h1>BoxPassword를 시작합니다</h1>
+        <p class="lead">마스터 비밀번호로 Vault가 봉인됩니다. 분실하면 복구할 수 없습니다.</p>
+        <label for="setup-pw">마스터 비밀번호 (8자 이상)</label>
+        <input id="setup-pw" type="password" autocomplete="new-password" />
+        <label for="setup-pw2">한 번 더 입력</label>
+        <input id="setup-pw2" type="password" autocomplete="new-password" />
+        <div class="msg" id="setup-msg"></div>
+        <div class="btn-row"><button class="btn-primary" id="setup-btn">Vault 만들기</button></div>
+      </div>
+    </section>
+
+    <!-- ===== Locked ===== -->
+    <section class="centered hidden" id="view-locked">
+      <div class="auth-card">
+        <div class="auth-art" aria-hidden="true">
+          <svg width="64" height="64"><use href="#boxpassword-mark"/></svg>
+        </div>
+        <h1>잠금 해제</h1>
+        <p class="lead">마스터 비밀번호를 입력해 잠금을 해제하세요.</p>
+        <label for="lock-pw">마스터 비밀번호</label>
+        <input id="lock-pw" type="password" autocomplete="current-password" />
+        <div class="msg" id="lock-msg"></div>
+        <div class="btn-row"><button class="btn-primary" id="lock-btn">잠금 해제</button></div>
+      </div>
+    </section>
+
+    <!-- ===== Unlocked (main) ===== -->
+    <section class="shell hidden" id="view-unlocked">
+      <header class="topbar">
+        <div class="brand"><svg class="logo" aria-hidden="true"><use href="#boxpassword-mark"/></svg> BoxPassword</div>
+        <span class="meta" id="badge"></span>
+        <div class="spacer"></div>
+        <span class="clipboard-pill" id="cb-pill" title="클립보드에 비밀이 있습니다">
+          <span class="ring" id="cb-ring" style="--pct: 100"></span>
+          <span id="cb-text">30s</span>
+          <button id="cb-clear" title="즉시 비우기">비우기</button>
+        </span>
+        <span class="pill" id="autolock-pill" title="자동 잠금까지 남은 시간" style="margin-right: 6px; -webkit-app-region: no-drag">
+          <span class="dot"></span>
+          <span id="autolock-text">--:--</span>
+        </span>
+        <button class="btn-ghost" id="theme-btn" title="테마 전환 (auto / light / dark)" style="-webkit-app-region: no-drag; padding: 6px 8px">
+          <svg class="icon-sm" id="theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg class="icon-sm hidden" id="theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          <svg class="icon-sm hidden" id="theme-icon-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>
+        </button>
+        <button class="btn-ghost" id="lock-now-btn" title="잠금 (⌘L)">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+          <span style="margin-left:6px">잠그기</span>
+        </button>
+      </header>
+
+      <aside class="sidebar">
+        <div class="sidebar-main">
+        <div class="sec">Library</div>
+        <ul class="nav">
+          <li class="active" data-filter="all">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7h18M3 12h18M3 17h18"/></svg>
+            전체
+            <span class="count" id="count-all">0</span>
+          </li>
+          <li data-filter="favorites">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            즐겨찾기
+            <span class="count" id="count-fav">0</span>
+          </li>
+          <li data-filter="recent">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            최근
+          </li>
+        </ul>
+
+        <div class="sec" style="margin-top: 18px; display: flex; align-items: center; justify-content: space-between; padding-right: 4px">
+          <span>그룹</span>
+          <button class="btn-tiny" id="group-mgr-btn" title="그룹 관리">관리</button>
+        </div>
+        <ul class="nav" id="groups-nav">
+          <li class="empty-li">아직 없음</li>
+        </ul>
+
+        <div class="sec" style="margin-top: 18px">Vault</div>
+        <ul class="nav">
+          <li id="backup-btn">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            백업 내보내기
+          </li>
+          <li id="restore-btn">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            백업 복구
+          </li>
+          <li id="csv-btn">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 13h6M9 17h6"/></svg>
+            CSV 가져오기
+          </li>
+          <li id="health-btn">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>
+            건강 검진
+          </li>
+          <li id="settings-btn">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6 1.65 1.65 0 0 0 10 3.09V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.61.24 1.05.83 1.05 1.51H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            설정
+          </li>
+        </ul>
+
+        </div>
+
+        <div class="sidebar-foot">
+          <div class="vault-card">
+            <div class="status unlocked" id="vault-status-pill">
+              <span class="dot"></span>
+              <span id="vault-status-text">잠금 해제</span>
+            </div>
+            <div class="meta">
+              <span><span id="vault-count">0</span>개 항목</span>
+              <span class="sep">·</span>
+              <span id="vault-fav-count">0</span>
+              <span style="color: var(--muted-2)">★</span>
+            </div>
+            <div class="path" id="vault-path-side">-</div>
+          </div>
+        </div>
+      </aside>
+
+      <section class="list">
+        <div class="list-head">
+          <input class="search" id="search" placeholder="검색 (⌘F)" />
+          <select id="sort" title="정렬" style="background: var(--panel-2); border: 1px solid var(--line); color: var(--fg-dim); padding: 6px 8px; border-radius: 7px; font: inherit; font-size: 12px">
+            <option value="title">제목순</option>
+            <option value="updated">최근 수정</option>
+            <option value="favorite">즐겨찾기 우선</option>
+          </select>
+          <button class="btn-ghost" id="new-btn" title="새 항목 (⌘N)">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+        </div>
+        <div class="list-scroll" id="entries"></div>
+      </section>
+
+      <section class="detail" id="detail">
+        <div class="detail-empty" id="detail-empty">
+          <div class="empty-art">
+            <svg viewBox="0 0 96 96" width="84" height="84" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="18" y="42" width="60" height="42" rx="6" stroke="currentColor"/>
+              <path d="M30 42v-10a18 18 0 0 1 36 0v10" stroke="currentColor"/>
+              <circle cx="48" cy="60" r="4" stroke="currentColor"/>
+              <path d="M48 64v6" stroke="currentColor"/>
+            </svg>
+          </div>
+          <h3>항목을 선택해 주세요</h3>
+          <div>왼쪽에서 항목을 고르거나 새로 추가합니다.</div>
+          <div class="kbd-hint"><kbd>⌘N</kbd> 새 항목 · <kbd>⌘F</kbd> 검색 · <kbd>⌘L</kbd> 잠금</div>
+        </div>
+        <div id="detail-content" class="hidden"></div>
+        <div id="health-content" class="health hidden"></div>
+      </section>
+    </section>
+
+    <!-- ===== New entry modal ===== -->
+    <div class="backdrop" id="modal-new">
+      <div class="modal">
+        <h3>새 항목 추가</h3>
+        <label>제목 *</label>
+        <input id="m-title" placeholder="예: GitHub" />
+        <div class="row">
+          <div>
+            <label>사용자명</label>
+            <input id="m-username" placeholder="andy" />
+          </div>
+          <div>
+            <label>URL</label>
+            <input id="m-url" placeholder="https://github.com" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>그룹</label>
+            <select id="m-group" style="width: 100%; background: var(--panel-2); border: 1px solid var(--line); color: var(--fg); padding: 8px 10px; border-radius: 7px; font: inherit"></select>
+          </div>
+          <div>
+            <label>변경 주기</label>
+            <select id="m-rotation" style="width: 100%; background: var(--panel-2); border: 1px solid var(--line); color: var(--fg); padding: 8px 10px; border-radius: 7px; font: inherit">
+              <option value="">사용 안 함</option>
+              <option value="30">30일</option>
+              <option value="60">60일</option>
+              <option value="90" selected>90일</option>
+              <option value="180">180일</option>
+              <option value="365">1년</option>
+            </select>
+          </div>
+        </div>
+
+        <label>패스워드 *</label>
+        <input id="m-secret" type="password" autocomplete="new-password" />
+        <div id="m-strength" class="strength s0 hidden" style="margin-top: 6px">
+          <div class="bar"><span></span></div>
+          <span id="m-strength-label">매우 약함</span>
+        </div>
+
+        <label>메모</label>
+        <textarea id="m-notes" rows="2" placeholder="(선택) 자유 메모"
+          style="width: 100%; background: var(--panel-2); border: 1px solid var(--line); color: var(--fg); border-radius: 7px; padding: 10px 12px; font: inherit; font-size: 13px; resize: vertical"></textarea>
+
+        <details style="margin-top: 12px">
+          <summary style="cursor: pointer; color: var(--muted); font-size: 12px">🎲 패스워드 생성기</summary>
+          <div class="gen">
+            <div class="tabs">
+              <button type="button" id="tab-random" class="active">Random</button>
+              <button type="button" id="tab-passphrase">Passphrase</button>
+            </div>
+            <div id="random-controls">
+              <div class="grid">
+                <div>
+                  <label>길이: <span id="gen-length-val">20</span></label>
+                  <input type="range" id="gen-length" min="8" max="64" value="20" />
+                </div>
+                <div>
+                  <label>연속 제한: <span id="gen-repeat-val">2</span></label>
+                  <input type="range" id="gen-repeat" min="0" max="5" value="2" />
+                </div>
+                <label class="check"><input type="checkbox" id="gen-lower" checked /> 소문자</label>
+                <label class="check"><input type="checkbox" id="gen-upper" checked /> 대문자</label>
+                <label class="check"><input type="checkbox" id="gen-digit" checked /> 숫자</label>
+                <label class="check"><input type="checkbox" id="gen-symbol" checked /> 기호</label>
+                <label class="check"><input type="checkbox" id="gen-each" checked /> 각 클래스 최소 1자</label>
+                <label class="check"><input type="checkbox" id="gen-readable" checked /> 가독성</label>
+              </div>
+            </div>
+            <div id="passphrase-controls" class="hidden">
+              <div class="grid">
+                <div>
+                  <label>단어 수: <span id="gen-words-val">6</span></label>
+                  <input type="range" id="gen-words" min="2" max="12" value="6" />
+                </div>
+                <div>
+                  <label>구분자</label>
+                  <input id="gen-sep" value="-" />
+                </div>
+                <label class="check"><input type="checkbox" id="gen-cap" checked /> 첫 글자 대문자</label>
+              </div>
+            </div>
+            <div style="margin-top: 10px">
+              <button type="button" class="btn-ghost" id="gen-btn">5개 후보 생성</button>
+            </div>
+            <div id="candidates" style="margin-top: 6px"></div>
+          </div>
+        </details>
+
+        <div class="msg" id="m-msg"></div>
+        <div class="footer">
+          <button class="btn-ghost" id="m-cancel">취소</button>
+          <button class="btn-primary" style="width: auto" id="m-save">저장</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Change password modal ===== -->
+    <div class="backdrop" id="modal-change">
+      <div class="modal">
+        <h3>패스워드 변경</h3>
+        <p style="color: var(--muted); font-size: 12px; margin: 0 0 14px">
+          이전 값은 자동으로 버전 이력에 보관됩니다.
+        </p>
+        <label>새 패스워드 *</label>
+        <input id="cp-secret" type="password" autocomplete="new-password" />
+        <div id="cp-strength" class="strength s0 hidden" style="margin-top: 6px">
+          <div class="bar"><span></span></div>
+          <span id="cp-strength-label">매우 약함</span>
+        </div>
+        <details style="margin-top: 12px">
+          <summary style="cursor: pointer; color: var(--muted); font-size: 12px">🎲 빠른 생성</summary>
+          <div class="gen">
+            <label>길이: <span id="cp-len-val">20</span></label>
+            <input type="range" id="cp-len" min="8" max="64" value="20" />
+            <div style="margin-top: 10px">
+              <button type="button" class="btn-ghost" id="cp-gen-btn">5개 후보 생성</button>
+            </div>
+            <div id="cp-candidates" style="margin-top: 6px"></div>
+          </div>
+        </details>
+        <label>변경 사유 (선택)</label>
+        <input id="cp-reason" placeholder="예: 정기 변경" />
+        <div class="msg" id="cp-msg"></div>
+        <div class="footer">
+          <button class="btn-ghost" id="cp-cancel">취소</button>
+          <button class="btn-primary" style="width: auto" id="cp-save">변경</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Master password change modal ===== -->
+    <div class="backdrop" id="modal-master">
+      <div class="modal" style="max-width: 460px">
+        <h3>마스터 비밀번호 변경</h3>
+        <p style="color: var(--muted); font-size: 12px; margin: 0 0 14px">
+          새 비밀번호로 vault key 가 재봉인됩니다. 기존 비밀번호는 더 이상 잠금 해제에 사용할 수 없습니다.
+        </p>
+        <label>현재 비밀번호</label>
+        <input id="mp-old" type="password" autocomplete="current-password" />
+        <label>새 비밀번호 (8자 이상)</label>
+        <input id="mp-new" type="password" autocomplete="new-password" />
+        <div id="mp-strength" class="strength s0 hidden" style="margin-top: 6px">
+          <div class="bar"><span></span></div>
+          <span id="mp-strength-label">매우 약함</span>
+        </div>
+        <label>새 비밀번호 확인</label>
+        <input id="mp-new2" type="password" autocomplete="new-password" />
+        <div class="msg" id="mp-msg"></div>
+        <div class="footer">
+          <button class="btn-ghost" id="mp-cancel">취소</button>
+          <button class="btn-primary" style="width: auto" id="mp-save">변경</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TOTP setup modal ===== -->
+    <div class="backdrop" id="modal-totp">
+      <div class="modal" style="max-width: 460px">
+        <h3>2단계 인증 (TOTP) 설정</h3>
+        <p style="color: var(--muted); font-size: 12px; margin: 0 0 14px">
+          사이트에서 받은 <code>otpauth://</code> URL 또는 base32 시크릿을 입력하세요.
+          알고리즘 SHA-1 / 30초 / 6자리만 지원합니다.
+        </p>
+        <textarea id="totp-input" rows="3"
+          placeholder="otpauth://totp/Example?secret=JBSWY3DPEHPK3PXP&issuer=Example
+또는: JBSWY3DPEHPK3PXP"
+          style="width: 100%; background: var(--panel-2); border: 1px solid var(--line); color: var(--fg); border-radius: 7px; padding: 10px 12px; font: inherit; font-family: ui-monospace, Menlo, monospace; font-size: 12px; resize: vertical"></textarea>
+        <div class="msg" id="totp-msg"></div>
+        <div class="footer">
+          <button class="btn-ghost" id="totp-cancel">취소</button>
+          <button class="btn-primary" style="width: auto" id="totp-save">저장</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Groups manage modal ===== -->
+    <div class="backdrop" id="modal-groups">
+      <div class="modal" style="max-width: 480px">
+        <h3>그룹 관리</h3>
+        <p style="color: var(--muted); font-size: 12px; margin: 0 0 14px">
+          항목을 카테고리로 묶을 수 있습니다. 그룹을 삭제해도 항목은 미분류로 이동하며 사라지지 않습니다.
+        </p>
+        <div id="g-list"></div>
+
+        <label style="margin-top: 14px">새 그룹</label>
+        <input id="g-name" placeholder="예: 업무 · 은행 · 가족" />
+        <div class="palette" id="g-palette"></div>
+        <div class="msg" id="g-msg"></div>
+        <div class="footer">
+          <button class="btn-ghost" id="g-cancel">닫기</button>
+          <button class="btn-primary" style="width: auto" id="g-add">추가</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Settings modal ===== -->
+    <div class="backdrop" id="modal-settings">
+      <div class="modal" style="max-width: 460px">
+        <h3>설정</h3>
+        <label>자동 잠금 시간</label>
+        <select id="set-autolock" style="width: 100%; background: var(--panel-2); border: 1px solid var(--line); color: var(--fg); padding: 8px 10px; border-radius: 7px; font: inherit">
+          <option value="60000">1분 후</option>
+          <option value="300000" selected>5분 후</option>
+          <option value="900000">15분 후</option>
+          <option value="1800000">30분 후</option>
+          <option value="3600000">1시간 후</option>
+          <option value="0">사용 안 함</option>
+        </select>
+        <div style="color: var(--muted); font-size: 11px; margin-top: 6px">마우스·키 입력이 없으면 지정 시간 뒤에 Vault가 자동 잠금됩니다.</div>
+
+        <label style="margin-top: 16px">macOS Keychain 자동 잠금 해제</label>
+        <div style="display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 7px">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <input type="checkbox" id="set-keychain" style="width: auto" />
+            <label for="set-keychain" style="margin: 0; color: var(--fg); font-size: 12px">Vault key 를 OS Keychain 에 보관 — 마스터 비번 없이 트레이 사용</label>
+          </div>
+          <div style="color: var(--muted); font-size: 11px">
+            첫 저장 시 macOS 가 권한 다이얼로그를 한 번 띄웁니다. 끄면 Keychain 항목이 즉시 삭제됩니다.
+            보안 모델은 OS 로그인 / Touch ID 에 위임됩니다.
+          </div>
+        </div>
+
+        <label style="margin-top: 16px">창 포커스 / 시스템 슬립</label>
+        <div style="display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 7px">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <input type="checkbox" id="set-lockonblur" style="width: auto" />
+            <label for="set-lockonblur" style="margin: 0; color: var(--fg); font-size: 12px">다른 앱으로 포커스가 이동하면 즉시 잠금</label>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <input type="checkbox" id="set-locksleep" style="width: auto" />
+            <label for="set-locksleep" style="margin: 0; color: var(--fg); font-size: 12px">시스템이 슬립에서 깨어나면 즉시 잠금</label>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <input type="checkbox" id="set-notify" style="width: auto" />
+            <label for="set-notify" style="margin: 0; color: var(--fg); font-size: 12px">자동 잠금/클립보드/변경 주기 알림 표시</label>
+          </div>
+        </div>
+
+        <label style="margin-top: 16px">클립보드 자동 비우기</label>
+        <select id="set-clipboard" style="width: 100%; background: var(--panel-2); border: 1px solid var(--line); color: var(--fg); padding: 8px 10px; border-radius: 7px; font: inherit">
+          <option value="5000">5초</option>
+          <option value="10000">10초</option>
+          <option value="20000">20초</option>
+          <option value="30000" selected>30초</option>
+          <option value="60000">60초</option>
+          <option value="120000">2분</option>
+        </select>
+        <div style="color: var(--muted); font-size: 11px; margin-top: 6px">
+          복사 직후 BoxPassword 메모리엔 SHA-256 해시만 남고 평문은 즉시 폐기됩니다.
+          타이머 만료 시 클립보드 내용이 그대로면 비웁니다(사용자가 다른 것을 복사했다면 건드리지 않습니다).
+        </div>
+
+        <div class="msg" id="set-msg"></div>
+        <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line)">
+          <button class="btn-ghost" id="set-change-master" style="width: 100%">마스터 비밀번호 변경…</button>
+        </div>
+        <div class="footer">
+          <button class="btn-primary" style="width: auto" id="set-close">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== CSV import modal ===== -->
+    <div class="backdrop" id="modal-csv">
+      <div class="modal" style="max-width: 560px">
+        <h3>CSV 가져오기</h3>
+        <p style="color: var(--muted); font-size: 12px; margin: 0 0 14px">
+          1Password / Bitwarden / Chrome 등에서 export한 CSV 내용을 그대로 붙여 넣으세요.
+          헤더에서 <code>name/title</code>, <code>username</code>, <code>password</code>, <code>url</code>,
+          <code>notes</code>, <code>folder</code>, <code>totp</code> 등을 자동 인식합니다.
+          folder 열의 값은 그룹으로 자동 생성됩니다.
+        </p>
+        <textarea id="csv-input" rows="10"
+          placeholder="name,username,password,url,folder,notes&#10;GitHub,andy,p@ss,https://github.com,Work,personal access token"
+          style="width: 100%; background: var(--panel-2); border: 1px solid var(--line); color: var(--fg); border-radius: 7px; padding: 10px 12px; font: inherit; font-family: ui-monospace, Menlo, monospace; font-size: 12px; resize: vertical"></textarea>
+        <div class="msg" id="csv-msg"></div>
+        <div class="footer">
+          <button class="btn-ghost" id="csv-cancel">취소</button>
+          <button class="btn-primary" style="width: auto" id="csv-go">가져오기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Backup password confirm modal ===== -->
+    <div class="backdrop" id="modal-backup">
+      <div class="modal">
+        <h3 id="bk-title">백업 내보내기</h3>
+        <p style="color: var(--muted); font-size: 12px; margin: 0 0 14px" id="bk-desc">
+          마스터 비밀번호로 봉인된 <code>.bpvault</code> 파일을 만듭니다. 비밀번호 외에는 어떤 정보도 평문으로 노출되지 않습니다.
+        </p>
+        <label>마스터 비밀번호 확인</label>
+        <input id="bk-pw" type="password" autocomplete="current-password" />
+        <div class="msg" id="bk-msg"></div>
+        <div class="footer">
+          <button class="btn-ghost" id="bk-cancel">취소</button>
+          <button class="btn-primary" style="width: auto" id="bk-go">계속</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Generic info / confirm dialog ===== -->
+    <div class="backdrop" id="modal-dialog" style="z-index: 70">
+      <div class="modal" style="max-width: 460px">
+        <h3 id="dialog-title">제목</h3>
+        <div id="dialog-body" style="color: var(--fg-dim); font-size: 13px"></div>
+        <div class="footer" id="dialog-footer"></div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+      // ============================================================ helpers
+      const $ = (id) => document.getElementById(id);
+      const tauri = window.__TAURI__?.core;
+      const invoke = (cmd, args) => {
+        if (!tauri) return Promise.reject(new Error("Tauri 컨텍스트 없음 (브라우저로 직접 연 경우입니다)"));
+        return tauri.invoke(cmd, args);
+      };
+      const escapeHtml = (s) => String(s ?? "")
+        .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+
+      let toastTimer = null;
+      function toast(text, kind) {
+        const el = $("toast");
+        el.textContent = text;
+        el.className = "toast show " + (kind || "");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+      }
+
+      function showView(id) {
+        ["view-setup", "view-locked", "view-unlocked"].forEach((v) => $(v).classList.toggle("hidden", v !== id));
+      }
+
+      // ============================================================ state
+      let entries = [];          // EntrySummary[]
+      let groups = [];            // GroupRow[]
+      let selectedId = null;
+      let searchQuery = "";
+      let filter = "all";        // 'all' | 'favorites' | 'recent' | 'group:<id>'
+      let sortMode = "title";    // 'title' | 'updated' | 'favorite'
+      let viewMode = "entry";    // 'entry' | 'health'
+      let revealed = false;       // current detail's reveal state
+      let revealedValue = null;
+
+      const GROUP_COLORS = [
+        "#ef4444", "#f97316", "#eab308", "#22c55e",
+        "#14b8a6", "#4f8cff", "#a855f7", "#ec4899",
+      ];
+      let pickedGroupColor = GROUP_COLORS[5];
+
+      // ============================================================ status
+      let rotationCheckSession = null;
+      async function refreshStatus() {
+        try {
+          const [status, version] = await Promise.all([invoke("vault_status"), invoke("app_version")]);
+          $("badge").textContent = `v${version} · ${status.path.split("/").slice(-2).join("/")}`;
+          $("vault-path-side").textContent = status.path;
+          const sp = $("vault-status-pill");
+          sp.className = "status " + (status.unlocked ? "unlocked" : "locked");
+          $("vault-status-text").textContent = !status.initialized
+            ? "미초기화" : status.unlocked ? "잠금 해제" : "잠김";
+          if (!status.initialized) { showView("view-setup"); rotationCheckSession = null; }
+          else if (!status.unlocked) { showView("view-locked"); rotationCheckSession = null; }
+          else {
+            showView("view-unlocked");
+            await refreshList();
+            // 잠금 해제 세션마다 한 번씩 변경 주기 도래 항목 알림
+            const sid = status.path + status.unlocked;
+            if (rotationCheckSession !== sid) {
+              rotationCheckSession = sid;
+              checkRotationOnce();
+            }
+          }
+        } catch (e) { toast("상태 조회 실패: " + e, "err"); }
+      }
+
+      function checkRotationOnce() {
+        let overdue = 0, upcoming = 0;
+        for (const e of entries) {
+          const s = entryRotationStatus(e);
+          if (s.kind === "overdue") overdue++;
+          else if (s.kind === "upcoming") upcoming++;
+        }
+        if (overdue + upcoming === 0) return;
+        const parts = [];
+        if (overdue) parts.push(`${overdue}개가 변경 기한을 지났습니다`);
+        if (upcoming) parts.push(`${upcoming}개가 곧 변경 예정`);
+        const body = parts.join(" · ");
+        toast(`🗓 ${body}`, overdue ? "err" : "ok");
+        notify("BoxPassword", body);
+      }
+
+      // ============================================================ list
+      async function refreshList() {
+        try {
+          const [es, gs] = await Promise.all([invoke("list_entries"), invoke("list_groups")]);
+          entries = es; groups = gs;
+        }
+        catch (e) { toast(String(e), "err"); entries = []; groups = []; }
+        renderGroupsNav();
+        renderList();
+      }
+
+      function renderGroupsNav() {
+        const nav = $("groups-nav");
+        if (!groups.length) {
+          nav.innerHTML = `<li class="empty-li">아직 없음</li>`;
+          return;
+        }
+        nav.innerHTML = groups.map((g) => `
+          <li data-filter="group:${g.id}">
+            <span class="color-dot" style="background:${escapeHtml(g.color || '#888')}"></span>
+            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap">${escapeHtml(g.name)}</span>
+            <span class="count">${g.entry_count}</span>
+          </li>
+        `).join("");
+        // 현재 필터가 이 그룹이면 active 표시
+        if (filter && filter.startsWith("group:")) {
+          const cur = nav.querySelector(`li[data-filter="${filter}"]`);
+          if (cur) cur.classList.add("active");
+        }
+      }
+
+      function visibleEntries() {
+        let arr = entries.slice();
+
+        if (filter === "favorites") arr = arr.filter((e) => e.favorite);
+        else if (filter === "recent") {
+          arr.sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || ""));
+          arr = arr.slice(0, 30);
+        } else if (filter && filter.startsWith("group:")) {
+          const gid = parseInt(filter.split(":")[1], 10);
+          arr = arr.filter((e) => e.group_id === gid);
+        }
+
+        if (sortMode === "updated") {
+          arr.sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || ""));
+        } else if (sortMode === "favorite") {
+          arr.sort((a, b) => {
+            if (a.favorite !== b.favorite) return a.favorite ? -1 : 1;
+            return a.title.localeCompare(b.title);
+          });
+        } else if (filter !== "recent") {
+          arr.sort((a, b) => a.title.localeCompare(b.title));
+        }
+
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          arr = arr.filter((e) =>
+            (e.title || "").toLowerCase().includes(q) ||
+            (e.username || "").toLowerCase().includes(q) ||
+            (e.url || "").toLowerCase().includes(q));
+        }
+        return arr;
+      }
+
+      function setViewMode(mode) {
+        viewMode = mode;
+        const isHealth = mode === "health";
+        $("detail-empty").classList.toggle("hidden", isHealth || !!selectedId);
+        $("detail-content").classList.toggle("hidden", isHealth || !selectedId);
+        $("health-content").classList.toggle("hidden", !isHealth);
+        document.querySelectorAll(".nav li").forEach((n) => n.classList.remove("active"));
+        if (isHealth) $("health-btn")?.classList.add("active");
+        else {
+          const filterLi = document.querySelector(`.nav li[data-filter="${filter}"]`);
+          if (filterLi) filterLi.classList.add("active");
+        }
+      }
+
+      function renderList() {
+        const visible = visibleEntries();
+        const totalCount = entries.length;
+        const favCount = entries.filter((e) => e.favorite).length;
+        $("count-all").textContent = totalCount;
+        $("count-fav").textContent = favCount;
+        $("vault-count").textContent = totalCount;
+        $("vault-fav-count").textContent = favCount;
+        const box = $("entries");
+        box.innerHTML = "";
+        if (!visible.length) {
+          const empty = document.createElement("div");
+          empty.className = "list-empty";
+          empty.textContent = entries.length === 0
+            ? "아직 항목이 없습니다. + 버튼으로 첫 항목을 추가해 보세요."
+            : "조건에 맞는 항목이 없습니다.";
+          box.appendChild(empty);
+          renderDetail(null);
+          return;
+        }
+        if (!visible.find((e) => e.id === selectedId)) selectedId = visible[0].id;
+
+        for (const e of visible) {
+          const row = document.createElement("div");
+          row.className = "item" + (e.id === selectedId ? " active" : "");
+          row.dataset.id = e.id;
+          const initial = (e.title || "?").trim().charAt(0).toUpperCase();
+          row.innerHTML = `
+            <div class="avatar">${escapeHtml(initial)}${e.favorite ? '<span class="star">★</span>' : ''}</div>
+            <div style="min-width:0">
+              <div class="title">${escapeHtml(e.title)}</div>
+              <div class="sub">${escapeHtml(e.username || e.url || "—")}</div>
+            </div>
+            <div class="hover-actions">
+              <button class="btn-icon" data-row-act="row-copy" data-row-id="${e.id}" title="패스워드 복사">${ICON_COPY}</button>
+            </div>
+          `;
+          row.addEventListener("click", (ev) => {
+            if (ev.target.closest("[data-row-act]")) return; // hover-actions에 양보
+            selectedId = e.id;
+            setViewMode("entry");
+            renderList();
+          });
+          box.appendChild(row);
+        }
+        renderDetail(visible.find((e) => e.id === selectedId) || null);
+      }
+
+      // 리스트 행 hover-actions 위임 핸들러 (선택 변경 없이 동작)
+      $("entries").addEventListener("click", async (e) => {
+        const t = e.target.closest("[data-row-act]"); if (!t) return;
+        e.stopPropagation();
+        const act = t.dataset.rowAct;
+        const id = t.dataset.rowId;
+        try {
+          if (act === "row-copy") {
+            const sec = await invoke("copy_to_clipboard", { entryId: id, delayMs: prefs.clipboardMs });
+            startClipboardPill(prefs.clipboardMs);
+            toast(`복사됨 — ${sec}초 후 자동 클리어`, "ok");
+          }
+        } catch (err) { toast(String(err), "err"); }
+      });
+
+      // ============================================================ 건강 검진 대시보드
+      async function openHealth() {
+        selectedId = null;
+        document.querySelectorAll(".item.active").forEach((n) => n.classList.remove("active"));
+        setViewMode("health");
+        $("health-content").innerHTML = `<div class="health-empty">분석 중…</div>`;
+        try {
+          const r = await invoke("analyze_health");
+          renderHealth(r);
+        } catch (e) {
+          $("health-content").innerHTML = `<div class="health-empty" style="color: var(--danger)">${escapeHtml(String(e))}</div>`;
+        }
+      }
+
+      function renderHealth(r) {
+        const score = r.avg_score || 0;
+        const avgClass = score >= 3 ? "ok" : score >= 2 ? "warn" : "danger";
+        const weakClass = r.weak.length === 0 ? "ok" : r.weak.length >= 3 ? "danger" : "warn";
+        const reusedCount = r.reused_groups.reduce((s, g) => s + g.entries.length, 0);
+        const reusedClass = reusedCount === 0 ? "ok" : "danger";
+        const agedClass = r.aged.length === 0 ? "ok" : "warn";
+
+        const rowHTML = (entryId, title, meta) => `
+          <div class="health-row" data-jump="${escapeHtml(entryId)}">
+            <span>${escapeHtml(title)}</span>
+            <span class="meta">${escapeHtml(meta || "")}</span>
+          </div>`;
+
+        const weakSection = r.weak.length === 0
+          ? `<div class="health-empty">약한 비밀번호가 없습니다. 👍</div>`
+          : r.weak.map((w) => rowHTML(w.entry_id, w.title, `점수 ${w.score}/4`)).join("");
+
+        const reusedSection = r.reused_groups.length === 0
+          ? `<div class="health-empty">중복 사용된 비밀번호가 없습니다. 👍</div>`
+          : r.reused_groups.map((g) => `
+              <div class="reused-group">
+                <div class="gh">그룹 ${g.group_id} · ${g.entries.length}개 항목이 같은 비밀번호를 사용</div>
+                ${g.entries.map((e) => rowHTML(e.entry_id, e.title, "")).join("")}
+              </div>`).join("");
+
+        const agedSection = r.aged.length === 0
+          ? `<div class="health-empty">1년 이상 변경 안 된 비밀번호가 없습니다.</div>`
+          : r.aged.map((a) => rowHTML(a.entry_id, a.title, `${a.age_days}일 전 변경`)).join("");
+
+        $("health-content").innerHTML = `
+          <h2>Vault 건강 검진</h2>
+          <p class="lead">잠금 해제된 상태에서만 분석합니다. 평문 비밀번호는 분석 직후 메모리에서 폐기됩니다.</p>
+
+          <div class="stat-grid">
+            <div class="stat">
+              <div class="label">전체 항목</div>
+              <div class="value">${r.total_entries}</div>
+              <div class="sub">관리 중</div>
+            </div>
+            <div class="stat ${avgClass}">
+              <div class="label">평균 강도</div>
+              <div class="value">${score.toFixed(2)}</div>
+              <div class="sub">/ 4.00 (zxcvbn)</div>
+            </div>
+            <div class="stat ${weakClass}">
+              <div class="label">약한 비밀번호</div>
+              <div class="value">${r.weak.length}</div>
+              <div class="sub">점수 ≤ ${1}</div>
+            </div>
+            <div class="stat ${reusedClass}">
+              <div class="label">중복 사용</div>
+              <div class="value">${reusedCount}</div>
+              <div class="sub">${r.reused_groups.length}개 그룹</div>
+            </div>
+          </div>
+
+          <div class="health-section">
+            <h3 class="${r.weak.length ? 'danger' : ''}">약한 비밀번호 <span class="chip">${r.weak.length}</span></h3>
+            ${weakSection}
+          </div>
+
+          <div class="health-section">
+            <h3 class="${r.reused_groups.length ? 'danger' : ''}">중복 사용된 비밀번호 <span class="chip">${r.reused_groups.length} 그룹</span></h3>
+            ${reusedSection}
+          </div>
+
+          <div class="health-section">
+            <h3 class="${r.aged.length ? 'warn' : ''}">오래된 비밀번호 (1년+) <span class="chip">${r.aged.length}</span></h3>
+            ${agedSection}
+          </div>
+        `;
+
+        // 항목 클릭 시 일반 보기로 이동
+        $("health-content").onclick = (ev) => {
+          const t = ev.target.closest("[data-jump]"); if (!t) return;
+          selectedId = t.dataset.jump;
+          setViewMode("entry");
+          renderList();
+        };
+      }
+
+      $("health-btn").addEventListener("click", openHealth);
+
+      // ============================================================ 변경 주기 계산
+      function entryRotationStatus(entry) {
+        if (!entry || !entry.rotation_days) return { kind: "none" };
+        const updated = new Date(entry.updated_at).getTime();
+        if (!Number.isFinite(updated)) return { kind: "none" };
+        const elapsed = Math.floor((Date.now() - updated) / 86400000);
+        const remaining = entry.rotation_days - elapsed;
+        if (remaining <= 0) return { kind: "overdue", days: -remaining };
+        if (remaining <= 14) return { kind: "upcoming", days: remaining };
+        return { kind: "ok", days: remaining };
+      }
+      function rotationBadgeHtml(entry) {
+        const s = entryRotationStatus(entry);
+        if (s.kind === "none") return "";
+        const cls = s.kind === "overdue" ? "danger" : s.kind === "upcoming" ? "warn" : "";
+        const icon = s.kind === "overdue" ? "⚠" : s.kind === "upcoming" ? "⏰" : "🗓";
+        const label = s.kind === "overdue"
+          ? `${s.days}일 지남 — 변경 필요`
+          : s.kind === "upcoming"
+            ? `${s.days}일 후 변경 권장`
+            : `다음 변경까지 ${s.days}일`;
+        return `<span class="group-pill" style="margin-left:8px ${cls ? `; color: var(--${cls})` : ''}" data-act="change-rotation" title="변경 주기 설정">${icon} ${escapeHtml(label)}</span>`;
+      }
+
+      // ============================================================ detail
+      const ICON_COPY = '<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+      const ICON_EYE  = '<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+      const ICON_EDIT = '<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>';
+      const ICON_UNDO = '<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></svg>';
+
+      let currentEntry = null;
+      let versionsCache = [];
+
+      async function renderDetail(entry) {
+        revealed = false; revealedValue = null;
+        currentEntry = entry;
+        const empty = $("detail-empty"), content = $("detail-content");
+        if (!entry) { empty.classList.remove("hidden"); content.classList.add("hidden"); content.innerHTML = ""; return; }
+        empty.classList.add("hidden"); content.classList.remove("hidden");
+
+        const username = entry.username || "";
+        const url = entry.url || "";
+        const updated = entry.updated_at ? new Date(entry.updated_at).toLocaleString("ko-KR") : "-";
+
+        content.innerHTML = `
+          <div class="detail-head">
+            <div class="meta">
+              <h2>${escapeHtml(entry.title)}</h2>
+              <div class="sub-title">
+                v${entry.current_version} · 업데이트 ${escapeHtml(updated)}
+                <span class="group-pill ${entry.group_id ? '' : 'empty'}" data-act="change-group" title="그룹 변경">
+                  ${entry.group_id
+                    ? `<span class="color-dot" style="background:${escapeHtml(entry.group_color || '#888')}"></span>${escapeHtml(entry.group_name || '')}`
+                    : '그룹 없음'}
+                </span>
+                ${rotationBadgeHtml(entry)}
+              </div>
+            </div>
+            <div class="actions">
+              <button class="btn-ghost" data-act="toggle-favorite" title="${entry.favorite ? '즐겨찾기 해제' : '즐겨찾기'}" style="${entry.favorite ? 'color: var(--warn); border-color: var(--warn)' : ''}">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="${entry.favorite ? 'currentColor' : 'none'}" stroke="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              </button>
+              <button class="btn-ghost" data-act="change-password" title="패스워드 변경">${ICON_EDIT}<span style="margin-left:6px">변경</span></button>
+              <button class="btn-ghost" data-act="delete-entry" title="항목 삭제" style="color: var(--danger); border-color: var(--line)">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                <span style="margin-left:6px">삭제</span>
+              </button>
+            </div>
+          </div>
+          <div class="fields">
+            <div class="field">
+              <div class="label">사용자명</div>
+              <div class="value ${username ? '' : 'empty'}" data-act="copy-username">${escapeHtml(username || "(없음)")}</div>
+              <div class="actions">
+                ${username ? `<button class="btn-icon" data-act="copy-username" title="복사">${ICON_COPY}</button>` : ''}
+              </div>
+            </div>
+            <div class="field">
+              <div class="label">패스워드</div>
+              <div class="value mono" data-act="copy-secret" id="pw-value" title="클릭하면 클립보드로 복사 (자동 클리어)">${"•".repeat(12)}</div>
+              <div class="actions">
+                <button class="btn-icon" data-act="reveal-secret" id="reveal-btn" title="보기/숨기기">${ICON_EYE}</button>
+                <button class="btn-icon" data-act="copy-secret" title="복사 (자동 클리어)">${ICON_COPY}</button>
+              </div>
+            </div>
+            <div class="field">
+              <div class="label">URL</div>
+              <div class="value ${url ? 'link' : 'empty'}" data-act="${url ? 'open-url' : ''}">${escapeHtml(url || "(없음)")}</div>
+              <div class="actions">
+                ${url ? `<button class="btn-icon" data-act="copy-url" title="복사">${ICON_COPY}</button>` : ''}
+              </div>
+            </div>
+          </div>
+
+          <div class="section-h">2단계 인증 (TOTP)</div>
+          <div class="totp-card" id="totp-card"></div>
+
+          <div class="section-h">메모</div>
+          <div class="notes-card">
+            <textarea id="notes-edit" placeholder="(선택) 자유 메모 — 봉인된 상태로 저장됩니다"></textarea>
+            <div class="row">
+              <span class="saved-hint" id="notes-saved-hint"></span>
+              <button class="btn-ghost" id="notes-save-btn" style="width: auto">저장</button>
+            </div>
+          </div>
+
+          <div class="section-h">버전 이력</div>
+          <div class="versions" id="versions-box">
+            <div style="padding: 14px; color: var(--muted); font-size: 12px">불러오는 중…</div>
+          </div>
+        `;
+
+        content.onclick = async (e) => {
+          const t = e.target.closest("[data-act]"); if (!t) return;
+          const act = t.dataset.act;
+          const v = t.dataset.version ? parseInt(t.dataset.version, 10) : null;
+          if (act === "copy-username" && username) {
+            await copyText(username); toast("사용자명을 복사했습니다", "ok");
+          } else if (act === "copy-url" && url) {
+            await copyText(url); toast("URL을 복사했습니다", "ok");
+          } else if (act === "copy-secret") {
+            try {
+              const sec = await invoke("copy_to_clipboard", { entryId: entry.id, delayMs: prefs.clipboardMs });
+              startClipboardPill(prefs.clipboardMs);
+              toast(`패스워드 복사됨 — ${sec}초 후 자동 클리어`, "ok");
+            } catch (err) { toast(String(err), "err"); }
+          } else if (act === "toggle-favorite") {
+            try {
+              const next = !entry.favorite;
+              await invoke("set_favorite", { entryId: entry.id, favorite: next });
+              entry.favorite = next;
+              await refreshList();
+              toast(next ? `즐겨찾기에 추가` : `즐겨찾기 해제`, "ok");
+            } catch (err) { toast(String(err), "err"); }
+          } else if (act === "reveal-secret") {
+            try {
+              if (!revealed) {
+                revealedValue = await invoke("reveal_secret", { entryId: entry.id });
+                $("pw-value").textContent = revealedValue;
+              } else {
+                $("pw-value").textContent = "•".repeat(12);
+                revealedValue = null;
+              }
+              revealed = !revealed;
+            } catch (err) { toast(String(err), "err"); }
+          } else if (act === "open-url" && url) {
+            try { window.open(url, "_blank"); } catch (_) { await copyText(url); toast("URL을 복사했습니다", "ok"); }
+          } else if (act === "change-rotation") {
+            const cur = entry.rotation_days || "";
+            let html = `<select id="cr-select" style="width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--fg);padding:8px 10px;border-radius:7px;font:inherit">`;
+            for (const opt of [["", "사용 안 함"], ["30","30일"], ["60","60일"], ["90","90일"], ["180","180일"], ["365","1년"]]) {
+              html += `<option value="${opt[0]}" ${String(cur) === opt[0] ? 'selected' : ''}>${opt[1]}</option>`;
+            }
+            html += `</select>`;
+            const ok = await showDialog({ title: "변경 주기", bodyHtml: html, primaryLabel: "적용", secondaryLabel: "취소" });
+            if (!ok) return;
+            const v = $("cr-select").value;
+            try {
+              await invoke("set_rotation_days", { entryId: entry.id, days: v ? parseInt(v, 10) : null });
+              toast("변경 주기가 갱신되었습니다", "ok");
+              await refreshList();
+            } catch (err) { toast(String(err), "err"); }
+          } else if (act === "change-password") {
+            openChangeModal();
+          } else if (act === "change-group") {
+            let html = `<select id="cg-select" style="width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--fg);padding:8px 10px;border-radius:7px;font:inherit">`;
+            html += `<option value="">그룹 없음</option>`;
+            for (const g of groups) {
+              html += `<option value="${g.id}" ${entry.group_id === g.id ? 'selected' : ''}>${escapeHtml(g.name)}</option>`;
+            }
+            html += `</select>`;
+            html += `<p style="margin: 8px 0 0; color: var(--muted); font-size: 11px">사이드바 '관리'에서 새 그룹을 만들 수 있습니다.</p>`;
+            const ok = await showDialog({ title: "그룹 변경", bodyHtml: html, primaryLabel: "적용", secondaryLabel: "취소" });
+            if (!ok) return;
+            const val = $("cg-select").value;
+            const newGroupId = val ? parseInt(val, 10) : null;
+            try {
+              await invoke("assign_entry_group", { entryId: entry.id, groupId: newGroupId });
+              toast("그룹이 변경되었습니다", "ok");
+              await refreshList();
+            } catch (err) { toast(String(err), "err"); }
+          } else if (act === "setup-totp") {
+            openTotpModal();
+          } else if (act === "remove-totp") {
+            const ok = await showDialog({
+              title: "TOTP 제거",
+              bodyText: "이 항목의 TOTP 시드를 제거합니다. 이후엔 코드를 생성할 수 없습니다.",
+              primaryLabel: "제거",
+              secondaryLabel: "취소",
+            });
+            if (!ok) return;
+            try {
+              await invoke("clear_entry_totp", { entryId: entry.id });
+              entry.has_totp = false;
+              stopTotpUpdates();
+              renderTotpEmptyCard();
+              await refreshList();
+              toast("TOTP가 제거되었습니다", "ok");
+            } catch (err) { toast(String(err), "err"); }
+          } else if (act === "copy-totp") {
+            try {
+              const r = await invoke("entry_totp_code", { entryId: entry.id });
+              if (r && r.code) {
+                await copyText(r.code);
+                toast(`OTP 복사됨 — ${r.remaining_seconds}초 남음`, "ok");
+              }
+            } catch (err) { toast(String(err), "err"); }
+          } else if (act === "delete-entry") {
+            const ok = await showDialog({
+              title: "항목 삭제",
+              bodyHtml: `<p style="margin: 0"><b>${escapeHtml(entry.title)}</b> 을(를) 삭제합니다.</p>
+                         <p style="margin: 8px 0 0; color: var(--muted); font-size: 12px">버전 이력을 포함해 영구 삭제되며 되돌릴 수 없습니다. 백업이 있다면 거기서 복구할 수 있습니다.</p>`,
+              primaryLabel: "삭제",
+              secondaryLabel: "취소",
+              primaryClass: "btn-primary",
+            });
+            if (!ok) return;
+            try {
+              await invoke("delete_entry", { entryId: entry.id });
+              toast(`"${entry.title}" 삭제됨`, "ok");
+              selectedId = null;
+              await refreshList();
+            } catch (err) { toast(String(err), "err"); }
+          }
+          // v-* 액션은 document 레벨에서 별도 처리합니다 (renderDetail의 innerHTML 갱신 영향 없음).
+        };
+
+        loadVersions(entry.id);
+        loadNotes(entry.id);
+        startTotpUpdates(entry);
+      }
+
+      // ============================================================ 노트 / TOTP
+      let totpInterval = null;
+      function stopTotpUpdates() {
+        if (totpInterval) { clearInterval(totpInterval); totpInterval = null; }
+      }
+
+      function renderTotpEmptyCard() {
+        const box = $("totp-card");
+        if (!box) return;
+        box.innerHTML = `
+          <div class="totp-empty">2단계 인증 시드가 설정되지 않았습니다.</div>
+          <div style="margin-top: 10px"><button class="btn-ghost" data-act="setup-totp">+ TOTP 추가</button></div>
+        `;
+      }
+
+      function renderTotpActiveCard(code, remaining, period) {
+        const box = $("totp-card");
+        if (!box) return;
+        const pct = Math.max(0, Math.round((remaining / period) * 100));
+        const formatted = code ? code.slice(0, 3) + " " + code.slice(3) : "— — —";
+        box.innerHTML = `
+          <div class="totp-row">
+            <div>
+              <div class="totp-code" data-act="copy-totp" title="클릭하여 복사">${escapeHtml(formatted)}</div>
+              <div class="totp-meta">${remaining}초 남음 · 6자리</div>
+            </div>
+            <div></div>
+            <div class="totp-actions">
+              <div class="totp-ring" style="--pct: ${pct}"><span>${remaining}</span></div>
+              <button class="btn-icon" data-act="copy-totp" title="복사">${ICON_COPY}</button>
+              <button class="btn-icon" data-act="setup-totp" title="변경">${ICON_EDIT}</button>
+              <button class="btn-icon" data-act="remove-totp" title="제거" style="color: var(--danger)">
+                <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      async function startTotpUpdates(entry) {
+        stopTotpUpdates();
+        if (!entry || !entry.has_totp) { renderTotpEmptyCard(); return; }
+        async function tick() {
+          if (!currentEntry || currentEntry.id !== entry.id) { stopTotpUpdates(); return; }
+          try {
+            const r = await invoke("entry_totp_code", { entryId: entry.id });
+            if (!r) { renderTotpEmptyCard(); stopTotpUpdates(); return; }
+            renderTotpActiveCard(r.code, r.remaining_seconds, r.period);
+          } catch (e) {
+            stopTotpUpdates();
+            $("totp-card").innerHTML = `<div class="totp-empty" style="color: var(--danger)">${escapeHtml(String(e))}</div>`;
+          }
+        }
+        await tick();
+        totpInterval = setInterval(tick, 1000);
+      }
+
+      async function loadNotes(entryId) {
+        try {
+          const n = await invoke("get_entry_notes", { entryId });
+          const ta = $("notes-edit");
+          if (ta) { ta.value = n || ""; }
+          const hint = $("notes-saved-hint");
+          if (hint) hint.textContent = "";
+        } catch (e) {
+          const ta = $("notes-edit");
+          if (ta) ta.value = "";
+        }
+      }
+
+      // ============================================================ 자체 다이얼로그 (window.prompt/confirm 대체)
+      function showDialog({ title, bodyHtml, bodyText, primaryLabel, secondaryLabel, primaryClass }) {
+        return new Promise((resolve) => {
+          $("dialog-title").textContent = title || "";
+          $("dialog-body").innerHTML = bodyHtml
+            ? bodyHtml
+            : (bodyText ? `<p style="margin: 0">${escapeHtml(bodyText)}</p>` : "");
+          const footer = $("dialog-footer");
+          footer.innerHTML = "";
+          const close = (value) => {
+            $("modal-dialog").classList.remove("show");
+            resolve(value);
+          };
+          if (secondaryLabel) {
+            const c = document.createElement("button");
+            c.className = "btn-ghost";
+            c.textContent = secondaryLabel;
+            c.onclick = () => close(false);
+            footer.appendChild(c);
+          }
+          if (primaryLabel) {
+            const p = document.createElement("button");
+            p.className = primaryClass || "btn-primary";
+            p.style.width = "auto";
+            p.textContent = primaryLabel;
+            p.onclick = () => close(true);
+            footer.appendChild(p);
+          }
+          const onBackdrop = (e) => {
+            if (e.target === $("modal-dialog")) close(false);
+          };
+          $("modal-dialog").onclick = onBackdrop;
+          $("modal-dialog").classList.add("show");
+        });
+      }
+
+      // v-* (버전 행 액션) 전용 위임 핸들러. document 레벨에 한 번만 설치.
+      document.addEventListener("click", async (e) => {
+        const t = e.target.closest("[data-act]"); if (!t) return;
+        const act = t.dataset.act;
+        if (!act || !act.startsWith("v-")) return;
+        if (!currentEntry) { toast("선택된 항목이 없습니다", "err"); return; }
+        const v = t.dataset.version ? parseInt(t.dataset.version, 10) : null;
+        if (v == null) { toast("버전 번호 누락", "err"); return; }
+        const entryId = currentEntry.id;
+        try {
+          if (act === "v-copy") {
+            const sec = await invoke("reveal_version_secret", { entryId, version: v });
+            await copyText(sec);
+            toast(`v${v} 복사됨 (클립보드)`, "ok");
+          } else if (act === "v-reveal") {
+            const sec = await invoke("reveal_version_secret", { entryId, version: v });
+            await showDialog({
+              title: `v${v} 패스워드`,
+              bodyHtml: `
+                <div style="font-family: ui-monospace, Menlo, monospace; padding: 12px; background: var(--panel-2); border-radius: 8px; word-break: break-all; font-size: 13px">${escapeHtml(sec)}</div>
+                <p style="color: var(--muted); font-size: 11px; margin-top: 10px">'복사'를 누르면 클립보드에 들어가고 30초 뒤 자동 클리어됩니다.</p>
+              `,
+              primaryLabel: "복사",
+              secondaryLabel: "닫기",
+              primaryClass: "btn-primary",
+            }).then(async (ok) => {
+              if (ok) {
+                await copyText(sec);
+                toast(`v${v} 복사됨 (클립보드)`, "ok");
+              }
+            });
+          } else if (act === "v-restore") {
+            const ok = await showDialog({
+              title: "버전 복원",
+              bodyText: `v${v}의 비밀로 되돌립니다. 현재 값은 그대로 이력에 남고, v${v}의 비밀이 새 버전으로 기록됩니다.`,
+              primaryLabel: "복원",
+              secondaryLabel: "취소",
+            });
+            if (!ok) return;
+            const newV = await invoke("restore_version", { entryId, version: v });
+            toast(`v${v} → v${newV}으로 복원되었습니다`, "ok");
+            await refreshList();
+            await loadVersions(entryId);
+          }
+        } catch (err) { toast(String(err), "err"); }
+      });
+
+      async function loadVersions(entryId) {
+        const box = $("versions-box");
+        try {
+          versionsCache = await invoke("list_versions", { entryId: entryId });
+        } catch (e) {
+          box.innerHTML = `<div style="padding: 14px; color: var(--danger); font-size: 12px">${escapeHtml(String(e))}</div>`;
+          return;
+        }
+        if (!versionsCache.length) {
+          box.innerHTML = `<div style="padding: 14px; color: var(--muted); font-size: 12px">버전이 없습니다.</div>`;
+          return;
+        }
+        box.innerHTML = versionsCache.map((v) => {
+          const dt = v.created_at ? new Date(v.created_at).toLocaleString("ko-KR") : "-";
+          const reason = v.reason ? escapeHtml(v.reason) : '<span style="color: var(--muted-2)">(사유 없음)</span>';
+          const cur = v.is_current ? '<span class="badge-cur">현재</span>' : '';
+          const restoreBtn = v.is_current ? '' :
+            `<button class="btn-icon" data-act="v-restore" data-version="${v.version}" title="이 버전으로 복원">${ICON_UNDO}</button>`;
+          return `
+            <div class="version ${v.is_current ? 'current' : ''}">
+              <div class="v-tag">v${v.version}${cur}</div>
+              <div>
+                <div class="v-meta">${escapeHtml(dt)}</div>
+                <div class="v-reason">${reason}</div>
+              </div>
+              <div class="actions">
+                <button class="btn-icon" data-act="v-reveal" data-version="${v.version}" title="보기">${ICON_EYE}</button>
+                <button class="btn-icon" data-act="v-copy"  data-version="${v.version}" title="클립보드 복사">${ICON_COPY}</button>
+                ${restoreBtn}
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+
+
+      // ============================================================ 그룹 관리 모달
+      const gModal = $("modal-groups");
+      function renderPalette() {
+        const wrap = $("g-palette");
+        wrap.innerHTML = GROUP_COLORS.map((c, i) =>
+          `<button type="button" class="swatch ${c === pickedGroupColor ? 'active' : ''}" data-color="${c}" style="background:${c}"></button>`
+        ).join("");
+        wrap.querySelectorAll(".swatch").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            pickedGroupColor = btn.dataset.color;
+            wrap.querySelectorAll(".swatch").forEach((s) => s.classList.toggle("active", s.dataset.color === pickedGroupColor));
+          });
+        });
+      }
+      function renderGroupsList() {
+        const box = $("g-list");
+        if (!groups.length) {
+          box.innerHTML = `<div style="color: var(--muted); font-size: 12px; padding: 6px 0">아직 생성된 그룹이 없습니다.</div>`;
+          return;
+        }
+        box.innerHTML = groups.map((g) => `
+          <div class="group-row" data-gid="${g.id}">
+            <span class="color-dot" style="background:${escapeHtml(g.color || '#888')}"></span>
+            <span class="gname">${escapeHtml(g.name)}</span>
+            <span class="gcount">${g.entry_count}개</span>
+            <button class="btn-icon" data-act="g-recolor" title="색상 변경">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2a10 10 0 1 0 0 20 4 4 0 0 0 0-8 2 2 0 0 1 0-4h2a8 8 0 0 0-2-8z"/></svg>
+            </button>
+            <button class="btn-icon" data-act="g-rename" title="이름 변경">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+            </button>
+            <button class="btn-icon" data-act="g-delete" title="삭제" style="color: var(--danger)">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            </button>
+          </div>
+        `).join("");
+      }
+
+      function openGroupsModal() {
+        $("g-name").value = "";
+        $("g-msg").textContent = ""; $("g-msg").className = "msg";
+        renderPalette();
+        renderGroupsList();
+        gModal.classList.add("show");
+        setTimeout(() => $("g-name").focus(), 50);
+      }
+      function closeGroupsModal() { gModal.classList.remove("show"); }
+      $("group-mgr-btn").addEventListener("click", openGroupsModal);
+      $("g-cancel").addEventListener("click", closeGroupsModal);
+      gModal.addEventListener("click", (e) => { if (e.target === gModal) closeGroupsModal(); });
+
+      $("g-add").addEventListener("click", async () => {
+        const name = $("g-name").value.trim();
+        const m = $("g-msg"); m.textContent = ""; m.className = "msg";
+        if (!name) { setMsgErr(m, "그룹 이름을 입력해 주세요."); return; }
+        try {
+          await invoke("create_group", { name, color: pickedGroupColor });
+          $("g-name").value = "";
+          await refreshList();
+          renderGroupsList();
+          toast(`그룹 "${name}" 추가됨`, "ok");
+        } catch (e) { setMsgErr(m, String(e)); }
+      });
+      $("g-name").addEventListener("keydown", (e) => { if (e.key === "Enter") $("g-add").click(); });
+
+      // g-list 위임: 이름 변경 / 색상 변경 / 삭제
+      $("g-list").addEventListener("click", async (e) => {
+        const btn = e.target.closest("[data-act]"); if (!btn) return;
+        const row = btn.closest(".group-row");
+        const gid = parseInt(row.dataset.gid, 10);
+        const group = groups.find((g) => g.id === gid);
+        if (!group) return;
+        const act = btn.dataset.act;
+        if (act === "g-rename") {
+          const span = row.querySelector(".gname");
+          const original = group.name;
+          span.contentEditable = "true";
+          span.focus();
+          const range = document.createRange();
+          range.selectNodeContents(span);
+          window.getSelection().removeAllRanges();
+          window.getSelection().addRange(range);
+          const finish = async (commit) => {
+            span.contentEditable = "false";
+            span.onblur = null; span.onkeydown = null;
+            const newName = span.textContent.trim();
+            if (commit && newName && newName !== original) {
+              try {
+                await invoke("rename_group", { groupId: gid, name: newName });
+                toast(`이름 변경: ${original} → ${newName}`, "ok");
+                await refreshList();
+                renderGroupsList();
+              } catch (err) { toast(String(err), "err"); span.textContent = original; }
+            } else {
+              span.textContent = original;
+            }
+          };
+          span.onblur = () => finish(true);
+          span.onkeydown = (ev) => {
+            if (ev.key === "Enter") { ev.preventDefault(); finish(true); }
+            if (ev.key === "Escape") { finish(false); }
+          };
+        } else if (act === "g-delete") {
+          const ok = await showDialog({
+            title: "그룹 삭제",
+            bodyText: `"${group.name}" 그룹을 삭제합니다. 안에 있던 ${group.entry_count}개 항목은 미분류로 이동합니다.`,
+            primaryLabel: "삭제",
+            secondaryLabel: "취소",
+          });
+          if (!ok) return;
+          try {
+            await invoke("delete_group", { groupId: gid });
+            // 현재 보고 있던 그룹 필터가 삭제됐다면 전체로 되돌림
+            if (filter === `group:${gid}`) filter = "all";
+            await refreshList();
+            renderGroupsList();
+            toast(`그룹 삭제됨`, "ok");
+          } catch (err) { toast(String(err), "err"); }
+        } else if (act === "g-recolor") {
+          // 다음 색으로 순환
+          const idx = GROUP_COLORS.indexOf(group.color);
+          const next = GROUP_COLORS[(idx + 1 + GROUP_COLORS.length) % GROUP_COLORS.length];
+          try {
+            await invoke("set_group_color", { groupId: gid, color: next });
+            await refreshList();
+            renderGroupsList();
+          } catch (err) { toast(String(err), "err"); }
+        }
+      });
+
+      // ============================================================ 백업 / 복구
+      let backupMode = "export"; // 'export' | 'import'
+      const bkModal = $("modal-backup");
+      function openBackupModal(mode) {
+        backupMode = mode;
+        $("bk-pw").value = "";
+        $("bk-msg").textContent = ""; $("bk-msg").className = "msg";
+        if (mode === "export") {
+          $("bk-title").textContent = "백업 내보내기";
+          $("bk-desc").innerHTML = `마스터 비밀번호로 봉인된 <code>.bpvault</code> 파일을 만듭니다. 비밀번호 외에는 어떤 정보도 평문으로 노출되지 않습니다.`;
+          $("bk-go").textContent = "내보내기";
+        } else {
+          $("bk-title").textContent = "백업에서 복구";
+          $("bk-desc").innerHTML = `선택한 <code>.bpvault</code> 파일의 마스터 비밀번호를 입력하세요. 현재 Vault 파일은 자동으로 <code>.bak</code> 으로 보존됩니다.`;
+          $("bk-go").textContent = "복구";
+        }
+        bkModal.classList.add("show");
+        setTimeout(() => $("bk-pw").focus(), 50);
+      }
+      function closeBackupModal() { bkModal.classList.remove("show"); }
+      $("bk-cancel").addEventListener("click", closeBackupModal);
+      bkModal.addEventListener("click", (e) => { if (e.target === bkModal) closeBackupModal(); });
+      $("bk-pw").addEventListener("keydown", (e) => { if (e.key === "Enter") $("bk-go").click(); });
+
+      $("backup-btn").addEventListener("click", () => openBackupModal("export"));
+      $("restore-btn").addEventListener("click", () => openBackupModal("import"));
+
+      // ============================================================ CSV 가져오기
+      const csvModal = $("modal-csv");
+      function openCsvModal() {
+        $("csv-input").value = "";
+        $("csv-msg").textContent = ""; $("csv-msg").className = "msg";
+        csvModal.classList.add("show");
+        setTimeout(() => $("csv-input").focus(), 50);
+      }
+      $("csv-btn").addEventListener("click", openCsvModal);
+      $("csv-cancel").addEventListener("click", () => csvModal.classList.remove("show"));
+      csvModal.addEventListener("click", (e) => { if (e.target === csvModal) csvModal.classList.remove("show"); });
+      $("csv-go").addEventListener("click", async () => {
+        const text = $("csv-input").value;
+        const m = $("csv-msg"); m.textContent = ""; m.className = "msg";
+        if (!text.trim()) return setMsgErr(m, "CSV 내용을 붙여 넣어 주세요.");
+        m.textContent = "가져오는 중…";
+        try {
+          const r = await invoke("import_csv", { csvText: text });
+          csvModal.classList.remove("show");
+          const groupNote = r.created_groups ? ` · 새 그룹 ${r.created_groups}` : "";
+          let body = `${r.imported}개 추가${groupNote}` +
+                     (r.skipped ? ` · 건너뜀 ${r.skipped}` : "");
+          if (r.errors && r.errors.length) {
+            console.warn("CSV import errors:", r.errors);
+            body += ` (오류 ${r.errors.length}건은 콘솔 참고)`;
+          }
+          toast(body, "ok");
+          notify("BoxPassword", body);
+          await refreshList();
+        } catch (e) { setMsgErr(m, String(e)); }
+      });
+
+      // ============================================================ 자동 잠금
+      const PREFS_KEY = "boxpassword.prefs.v1";
+      const DEFAULT_PREFS = {
+        autoLockMs: 5 * 60 * 1000,
+        lockOnBlur: false,
+        lockOnSleep: true,
+        notifications: true,
+        clipboardMs: 30_000,
+      };
+
+      function loadPrefs() {
+        try {
+          const raw = localStorage.getItem(PREFS_KEY);
+          if (!raw) return { ...DEFAULT_PREFS };
+          const p = JSON.parse(raw);
+          return {
+            autoLockMs: Number.isFinite(p.autoLockMs) ? p.autoLockMs : DEFAULT_PREFS.autoLockMs,
+            lockOnBlur: !!p.lockOnBlur,
+            lockOnSleep: p.lockOnSleep !== undefined ? !!p.lockOnSleep : DEFAULT_PREFS.lockOnSleep,
+            notifications: p.notifications !== undefined ? !!p.notifications : DEFAULT_PREFS.notifications,
+            clipboardMs: Number.isFinite(p.clipboardMs) && p.clipboardMs >= 1000
+              ? p.clipboardMs
+              : DEFAULT_PREFS.clipboardMs,
+          };
+        } catch { return { ...DEFAULT_PREFS }; }
+      }
+      function savePrefs(p) {
+        try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch {}
+      }
+      let prefs = loadPrefs();
+
+      let inactivityTimer = null;
+      let lastActivityAt = Date.now();
+
+      function isUnlockedView() {
+        return !$("view-unlocked").classList.contains("hidden");
+      }
+
+      function clearInactivityTimer() {
+        if (inactivityTimer) { clearTimeout(inactivityTimer); inactivityTimer = null; }
+      }
+
+      function scheduleAutoLock() {
+        clearInactivityTimer();
+        if (!isUnlockedView()) return;
+        if (!prefs.autoLockMs || prefs.autoLockMs <= 0) return;
+        inactivityTimer = setTimeout(triggerAutoLock, prefs.autoLockMs);
+      }
+
+      async function triggerAutoLock() {
+        if (!isUnlockedView()) return;
+        try {
+          await invoke("lock_vault");
+          selectedId = null;
+          ["modal-new", "modal-change", "modal-backup", "modal-dialog", "modal-settings"]
+            .forEach((id) => $(id)?.classList.remove("show"));
+          toast("자동 잠금되었습니다", "ok");
+          notify("BoxPassword", "비활동 감지로 vault가 자동 잠금되었습니다.");
+          await refreshStatus();
+        } catch (e) { toast("자동 잠금 실패: " + e, "err"); }
+      }
+
+      function noteActivity() {
+        lastActivityAt = Date.now();
+        if (isUnlockedView()) scheduleAutoLock();
+      }
+
+      // 사용자 활동 이벤트들 — passive로 등록해 스크롤 성능 영향 없음.
+      ["mousemove", "mousedown", "keydown", "wheel", "touchstart", "click"].forEach((ev) => {
+        document.addEventListener(ev, noteActivity, { passive: true });
+      });
+
+      // 창 포커스 잃을 때 옵션 동작
+      window.addEventListener("blur", () => {
+        if (prefs.lockOnBlur && isUnlockedView()) triggerAutoLock();
+      });
+      // 다시 포커스 받으면 타이머 재시작
+      window.addEventListener("focus", () => { if (isUnlockedView()) scheduleAutoLock(); });
+
+      // ============================================================ 설정 모달
+      const setModal = $("modal-settings");
+      async function openSettings() {
+        $("set-autolock").value = String(prefs.autoLockMs);
+        $("set-lockonblur").checked = prefs.lockOnBlur;
+        $("set-locksleep").checked = prefs.lockOnSleep;
+        $("set-notify").checked = prefs.notifications;
+        $("set-clipboard").value = String(prefs.clipboardMs);
+        $("set-msg").textContent = ""; $("set-msg").className = "msg";
+        // Keychain 토글의 실제 상태는 OS keychain 항목 유무로 판단.
+        try { $("set-keychain").checked = await invoke("keychain_has"); } catch (_) { $("set-keychain").checked = false; }
+        setModal.classList.add("show");
+      }
+      function closeSettings() { setModal.classList.remove("show"); }
+      $("settings-btn").addEventListener("click", openSettings);
+      $("set-close").addEventListener("click", closeSettings);
+      setModal.addEventListener("click", (e) => { if (e.target === setModal) closeSettings(); });
+
+      $("set-autolock").addEventListener("change", (e) => {
+        prefs.autoLockMs = parseInt(e.target.value, 10) || 0;
+        savePrefs(prefs);
+        scheduleAutoLock();
+        const label = e.target.options[e.target.selectedIndex].textContent;
+        $("set-msg").textContent = `자동 잠금: ${label}`;
+        $("set-msg").className = "msg ok";
+      });
+      $("set-lockonblur").addEventListener("change", (e) => {
+        prefs.lockOnBlur = !!e.target.checked;
+        savePrefs(prefs);
+        $("set-msg").textContent = prefs.lockOnBlur ? "창 포커스 잃을 때 잠금: 켬" : "창 포커스 잃을 때 잠금: 끔";
+        $("set-msg").className = "msg ok";
+      });
+      $("set-locksleep").addEventListener("change", (e) => {
+        prefs.lockOnSleep = !!e.target.checked;
+        savePrefs(prefs);
+        $("set-msg").textContent = prefs.lockOnSleep ? "슬립 후 자동 잠금: 켬" : "슬립 후 자동 잠금: 끔";
+        $("set-msg").className = "msg ok";
+      });
+      $("set-keychain").addEventListener("change", async (e) => {
+        const m = $("set-msg");
+        try {
+          if (e.target.checked) {
+            await invoke("keychain_save_current");
+            m.textContent = "Keychain 에 vault key 저장됨 — 다음 실행부터 자동 잠금 해제";
+            m.className = "msg ok";
+            notify("BoxPassword", "Keychain 자동 잠금 해제가 활성화되었습니다");
+          } else {
+            await invoke("keychain_clear");
+            m.textContent = "Keychain 항목이 삭제되었습니다";
+            m.className = "msg ok";
+            notify("BoxPassword", "Keychain 자동 잠금 해제가 비활성화되었습니다");
+          }
+        } catch (err) {
+          e.target.checked = !e.target.checked;  // 롤백
+          m.textContent = String(err);
+          m.className = "msg err";
+        }
+      });
+
+      $("set-notify").addEventListener("change", async (e) => {
+        prefs.notifications = !!e.target.checked;
+        savePrefs(prefs);
+        if (prefs.notifications) await ensureNotificationPermission();
+        $("set-msg").textContent = prefs.notifications ? "시스템 알림: 켬" : "시스템 알림: 끔";
+        $("set-msg").className = "msg ok";
+      });
+      $("set-clipboard").addEventListener("change", (e) => {
+        prefs.clipboardMs = parseInt(e.target.value, 10) || 30000;
+        savePrefs(prefs);
+        const label = e.target.options[e.target.selectedIndex].textContent;
+        $("set-msg").textContent = `클립보드 자동 비우기: ${label}`;
+        $("set-msg").className = "msg ok";
+      });
+      // ============================================================ 마스터 비밀번호 변경
+      const mpModal = $("modal-master");
+      function openMasterModal() {
+        $("mp-old").value = ""; $("mp-new").value = ""; $("mp-new2").value = "";
+        $("mp-msg").textContent = ""; $("mp-msg").className = "msg";
+        $("mp-strength").classList.add("hidden");
+        mpModal.classList.add("show");
+        setTimeout(() => $("mp-old").focus(), 50);
+      }
+      $("set-change-master").addEventListener("click", () => {
+        setModal.classList.remove("show");
+        openMasterModal();
+      });
+      $("mp-cancel").addEventListener("click", () => mpModal.classList.remove("show"));
+      mpModal.addEventListener("click", (e) => { if (e.target === mpModal) mpModal.classList.remove("show"); });
+
+      let mpStrengthTimer = null;
+      $("mp-new").addEventListener("input", (e) => {
+        clearTimeout(mpStrengthTimer);
+        const v = e.target.value;
+        mpStrengthTimer = setTimeout(async () => {
+          const box = $("mp-strength"); const label = $("mp-strength-label");
+          if (!v) { box.classList.add("hidden"); return; }
+          try {
+            const s = await invoke("estimate_strength", { password: v });
+            box.className = `strength s${s.score}`;
+            box.classList.remove("hidden");
+            label.textContent = s.label;
+          } catch (_) {}
+        }, 150);
+      });
+
+      $("mp-save").addEventListener("click", async () => {
+        const oldp = $("mp-old").value;
+        const newp = $("mp-new").value;
+        const newp2 = $("mp-new2").value;
+        const m = $("mp-msg"); m.textContent = ""; m.className = "msg";
+        if (!oldp) return setMsgErr(m, "현재 비밀번호를 입력해 주세요.");
+        if (newp.length < 8) return setMsgErr(m, "새 비밀번호는 8자 이상이어야 합니다.");
+        if (newp !== newp2) return setMsgErr(m, "새 비밀번호 확인이 일치하지 않습니다.");
+        if (newp === oldp) return setMsgErr(m, "새 비밀번호가 이전과 같습니다.");
+        try {
+          m.textContent = "재봉인 중… 잠시만요";
+          await invoke("change_master_password", { oldPassword: oldp, newPassword: newp });
+          mpModal.classList.remove("show");
+          toast("마스터 비밀번호가 변경되었습니다", "ok");
+        } catch (e) { setMsgErr(m, String(e)); }
+      });
+      ["mp-old", "mp-new", "mp-new2"].forEach((id) => {
+        $(id).addEventListener("keydown", (e) => { if (e.key === "Enter") $("mp-save").click(); });
+      });
+
+      // ============================================================ TOTP 설정 모달
+      const totpModal = $("modal-totp");
+      function openTotpModal() {
+        $("totp-input").value = "";
+        $("totp-msg").textContent = ""; $("totp-msg").className = "msg";
+        totpModal.classList.add("show");
+        setTimeout(() => $("totp-input").focus(), 50);
+      }
+      $("totp-cancel").addEventListener("click", () => totpModal.classList.remove("show"));
+      totpModal.addEventListener("click", (e) => { if (e.target === totpModal) totpModal.classList.remove("show"); });
+
+      $("totp-save").addEventListener("click", async () => {
+        if (!currentEntry) return;
+        const input = $("totp-input").value.trim();
+        const m = $("totp-msg"); m.textContent = ""; m.className = "msg";
+        if (!input) return setMsgErr(m, "otpauth URL 또는 base32 시크릿을 입력해 주세요.");
+        try {
+          await invoke("set_entry_totp", { entryId: currentEntry.id, input });
+          totpModal.classList.remove("show");
+          toast("TOTP 시드가 설정되었습니다", "ok");
+          currentEntry.has_totp = true;
+          await refreshList();
+          await startTotpUpdates(currentEntry);
+        } catch (e) { setMsgErr(m, String(e)); }
+      });
+
+      // ============================================================ 노트 저장
+      let notesSaveTimer = null;
+      document.addEventListener("click", async (e) => {
+        if (e.target && e.target.id === "notes-save-btn") {
+          if (!currentEntry) return;
+          const val = $("notes-edit").value;
+          try {
+            await invoke("set_entry_notes", { entryId: currentEntry.id, notes: val });
+            const hint = $("notes-saved-hint");
+            if (hint) {
+              hint.textContent = "저장됨 ✓";
+              clearTimeout(notesSaveTimer);
+              notesSaveTimer = setTimeout(() => { if (hint) hint.textContent = ""; }, 2000);
+            }
+            await refreshList();
+          } catch (err) { toast(String(err), "err"); }
+        }
+      });
+
+      // ============================================================ 정렬 / 즐겨찾기 필터 연동
+      $("sort").addEventListener("change", (e) => { sortMode = e.target.value; renderList(); });
+
+      // refreshStatus 직후마다 잠금 해제 상태면 타이머 갱신, 잠금 상태면 정리.
+      const _origRefreshStatus = refreshStatus;
+      refreshStatus = async function patchedRefreshStatus() {
+        await _origRefreshStatus.apply(this, arguments);
+        if (isUnlockedView()) scheduleAutoLock();
+        else { clearInactivityTimer(); stopClipboardPill(); }
+      };
+
+      // ============================================================ 상단바 자동 잠금 카운트다운
+      function fmtMs(ms) {
+        if (ms <= 0) return "0:00";
+        const s = Math.ceil(ms / 1000);
+        const m = Math.floor(s / 60);
+        const rs = (s % 60).toString().padStart(2, "0");
+        return `${m}:${rs}`;
+      }
+      setInterval(() => {
+        const pill = $("autolock-pill");
+        if (!isUnlockedView() || !prefs.autoLockMs) {
+          pill.style.display = "none";
+          return;
+        }
+        pill.style.display = "inline-flex";
+        const left = prefs.autoLockMs - (Date.now() - lastActivityAt);
+        const text = $("autolock-text");
+        text.textContent = `${fmtMs(left)} 후 잠금`;
+        pill.classList.remove("warn", "danger");
+        if (left <= 30_000) pill.classList.add("danger");
+        else if (left <= 60_000) pill.classList.add("warn");
+      }, 500);
+
+      // ============================================================ 클립보드 상태 pill
+      let clipboardStart = 0;
+      let clipboardTotal = 0;
+      let clipboardTimer = null;
+      function startClipboardPill(totalMs) {
+        stopClipboardPill();
+        clipboardStart = Date.now();
+        clipboardTotal = totalMs;
+        $("cb-pill").classList.add("show");
+        const tick = () => {
+          const elapsed = Date.now() - clipboardStart;
+          const left = clipboardTotal - elapsed;
+          if (left <= 0) { stopClipboardPill(); return; }
+          const pct = Math.max(0, Math.round((left / clipboardTotal) * 100));
+          $("cb-ring").style.setProperty("--pct", pct);
+          $("cb-text").textContent = `${Math.ceil(left / 1000)}s`;
+          clipboardTimer = setTimeout(tick, 200);
+        };
+        tick();
+      }
+      function stopClipboardPill() {
+        if (clipboardTimer) { clearTimeout(clipboardTimer); clipboardTimer = null; }
+        $("cb-pill").classList.remove("show");
+      }
+      $("cb-clear").addEventListener("click", async () => {
+        try { await invoke("clear_clipboard"); } catch (_) {}
+        stopClipboardPill();
+        toast("클립보드를 비웠습니다", "ok");
+      });
+
+      $("bk-go").addEventListener("click", async () => {
+        const pw = $("bk-pw").value;
+        const m = $("bk-msg"); m.textContent = ""; m.className = "msg";
+        if (!pw) { setMsgErr(m, "비밀번호를 입력하세요."); return; }
+        try {
+          if (backupMode === "export") {
+            m.textContent = "봉인 중… 잠시만요";
+            const res = await invoke("export_vault", { password: pw });
+            closeBackupModal();
+            if (res) toast(`백업을 저장했습니다: ${res.path}`, "ok");
+            else toast("저장이 취소되었습니다");
+          } else {
+            m.textContent = "복호화 중…";
+            const res = await invoke("import_vault", { password: pw });
+            closeBackupModal();
+            if (res) {
+              const bak = res.backup_kept_at ? ` (이전 파일: ${res.backup_kept_at})` : "";
+              toast(`복구 완료${bak}. 잠금 화면에서 마스터 비밀번호로 해제하세요.`, "ok");
+              await refreshStatus();
+            } else {
+              toast("선택이 취소되었습니다");
+            }
+          }
+        } catch (e) {
+          setMsgErr(m, String(e));
+        }
+      });
+
+      async function copyText(text) {
+        try { await navigator.clipboard.writeText(text); }
+        catch (_) {
+          // 폴백: textarea
+          const ta = document.createElement("textarea"); ta.value = text;
+          document.body.appendChild(ta); ta.select();
+          try { document.execCommand("copy"); } catch (_) {}
+          ta.remove();
+        }
+      }
+
+      // ============================================================ setup / lock
+      $("setup-btn").addEventListener("click", async () => {
+        const pw = $("setup-pw").value, pw2 = $("setup-pw2").value;
+        const m = $("setup-msg"); m.textContent = ""; m.className = "msg";
+        if (pw.length < 8) return setMsgErr(m, "8자 이상으로 입력해 주세요.");
+        if (pw !== pw2) return setMsgErr(m, "두 입력이 일치하지 않습니다.");
+        m.textContent = "Vault 생성 중… (Argon2id에 잠시 걸립니다)";
+        try {
+          await invoke("initialize_vault", { password: pw });
+          $("setup-pw").value = ""; $("setup-pw2").value = "";
+          await refreshStatus();
+        } catch (e) { setMsgErr(m, String(e)); }
+      });
+      function setMsgErr(el, t) { el.textContent = t; el.className = "msg err"; }
+
+      $("lock-btn").addEventListener("click", async () => {
+        const pw = $("lock-pw").value;
+        const m = $("lock-msg"); m.textContent = ""; m.className = "msg";
+        if (!pw) return;
+        m.textContent = "잠금 해제 중…";
+        try {
+          await invoke("unlock_vault", { password: pw });
+          $("lock-pw").value = "";
+          await refreshStatus();
+        } catch (e) { setMsgErr(m, String(e)); }
+      });
+
+      $("lock-now-btn").addEventListener("click", async () => {
+        try { await invoke("lock_vault"); selectedId = null; await refreshStatus(); }
+        catch (e) { toast(String(e), "err"); }
+      });
+
+      // ============================================================ sidebar + search
+      // 필터 li는 동적 추가(그룹)도 있어 위임으로 처리.
+      document.addEventListener("click", (e) => {
+        const li = e.target.closest(".sidebar .nav li[data-filter]");
+        if (!li) return;
+        filter = li.dataset.filter;
+        setViewMode("entry");
+        renderList();
+      });
+
+      let searchTimer = null;
+      $("search").addEventListener("input", (e) => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => { searchQuery = e.target.value.trim(); renderList(); }, 80);
+      });
+
+      // ============================================================ new entry modal
+      const modal = $("modal-new");
+      const openModal = () => {
+        $("m-title").value = ""; $("m-username").value = ""; $("m-url").value = "";
+        $("m-secret").value = ""; $("m-notes").value = "";
+        $("m-rotation").value = "90";
+        $("m-msg").textContent = ""; $("m-msg").className = "msg";
+        $("m-strength").classList.add("hidden");
+        $("candidates").innerHTML = "";
+        // 그룹 드롭다운 채우기. 현재 사이드바에 그룹 필터가 활성화돼 있으면 기본 선택.
+        const sel = $("m-group");
+        sel.innerHTML = '<option value="">그룹 없음</option>';
+        const defaultGroup = filter && filter.startsWith("group:") ? parseInt(filter.split(":")[1], 10) : null;
+        for (const g of groups) {
+          const opt = document.createElement("option");
+          opt.value = String(g.id); opt.textContent = g.name;
+          if (g.id === defaultGroup) opt.selected = true;
+          sel.appendChild(opt);
+        }
+        modal.classList.add("show");
+        setTimeout(() => $("m-title").focus(), 50);
+      };
+      const closeModal = () => modal.classList.remove("show");
+
+      $("new-btn").addEventListener("click", openModal);
+      $("m-cancel").addEventListener("click", closeModal);
+      modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
+
+      $("m-save").addEventListener("click", async () => {
+        const title = $("m-title").value.trim();
+        const username = $("m-username").value.trim() || null;
+        const url = $("m-url").value.trim() || null;
+        const secret = $("m-secret").value;
+        const notes = $("m-notes").value;
+        const groupVal = $("m-group").value;
+        const rotationVal = $("m-rotation").value;
+        const m = $("m-msg"); m.textContent = ""; m.className = "msg";
+        if (!title) return setMsgErr(m, "제목을 입력해 주세요.");
+        if (!secret) return setMsgErr(m, "패스워드를 입력해 주세요.");
+        try {
+          const id = await invoke("create_entry", { title, username, url, secret });
+          if (groupVal) {
+            await invoke("assign_entry_group", { entryId: id, groupId: parseInt(groupVal, 10) });
+          }
+          if (notes && notes.trim()) {
+            await invoke("set_entry_notes", { entryId: id, notes });
+          }
+          if (rotationVal) {
+            await invoke("set_rotation_days", { entryId: id, days: parseInt(rotationVal, 10) });
+          }
+          $("m-secret").value = ""; $("m-notes").value = "";
+          closeModal();
+          await refreshList();
+          selectedId = id; renderList();
+          toast("항목을 추가했습니다", "ok");
+        } catch (e) { setMsgErr(m, String(e)); }
+      });
+
+      // ============================================================ generator
+      let genMode = "Random";
+      const setMode = (mode) => {
+        genMode = mode;
+        $("tab-random").classList.toggle("active", mode === "Random");
+        $("tab-passphrase").classList.toggle("active", mode === "Passphrase");
+        $("random-controls").classList.toggle("hidden", mode !== "Random");
+        $("passphrase-controls").classList.toggle("hidden", mode !== "Passphrase");
+      };
+      $("tab-random").addEventListener("click", () => setMode("Random"));
+      $("tab-passphrase").addEventListener("click", () => setMode("Passphrase"));
+
+      const bindSlider = (s, l) => { const el = $(s), out = $(l); const sync = () => out.textContent = el.value; el.addEventListener("input", sync); sync(); };
+      bindSlider("gen-length", "gen-length-val");
+      bindSlider("gen-repeat", "gen-repeat-val");
+      bindSlider("gen-words", "gen-words-val");
+
+      function buildPolicy() {
+        const mode = genMode === "Random"
+          ? { kind: "Random" }
+          : { kind: "Passphrase", words: parseInt($("gen-words").value, 10), separator: $("gen-sep").value || "-", capitalize: $("gen-cap").checked };
+        return {
+          name: "ui",
+          length: parseInt($("gen-length").value, 10),
+          lower: $("gen-lower").checked, upper: $("gen-upper").checked,
+          digit: $("gen-digit").checked, symbol: $("gen-symbol").checked,
+          symbol_set: null, exclude_chars: "",
+          require_each_class: $("gen-each").checked,
+          readable: $("gen-readable").checked,
+          max_repeat: parseInt($("gen-repeat").value, 10),
+          dictionary_block: true,
+          mode,
+        };
+      }
+
+      function renderCandidates(items) {
+        const box = $("candidates"); box.innerHTML = "";
+        for (const c of items) {
+          const row = document.createElement("div"); row.className = "candidate";
+          row.innerHTML = `
+            <div>
+              <div class="pw">${escapeHtml(c.password)}</div>
+              <div class="strength s${c.strength.score}" style="margin-top:4px"><div class="bar"><span></span></div><span>${escapeHtml(c.strength.label)}</span></div>
+            </div>
+            <button type="button" class="btn-ghost apply">사용</button>
+          `;
+          row.querySelector(".apply").onclick = () => {
+            $("m-secret").value = c.password;
+            updateLiveStrength(c.password);
+          };
+          box.appendChild(row);
+        }
+      }
+
+      $("gen-btn").addEventListener("click", async () => {
+        try {
+          const items = await invoke("generate_passwords", { policy: buildPolicy(), count: 5 });
+          renderCandidates(items);
+        } catch (e) { toast(String(e), "err"); }
+      });
+
+      let strengthTimer = null;
+      async function updateLiveStrength(value) {
+        const box = $("m-strength"); const label = $("m-strength-label");
+        if (!value) { box.classList.add("hidden"); return; }
+        try {
+          const s = await invoke("estimate_strength", { password: value });
+          box.className = `strength s${s.score}`;
+          box.classList.remove("hidden");
+          label.textContent = s.label;
+        } catch (_) {}
+      }
+      $("m-secret").addEventListener("input", (e) => {
+        clearTimeout(strengthTimer);
+        const v = e.target.value;
+        strengthTimer = setTimeout(() => updateLiveStrength(v), 150);
+      });
+
+      // ============================================================ change-password modal
+      const cpModal = $("modal-change");
+      function openChangeModal() {
+        if (!currentEntry) return;
+        $("cp-secret").value = "";
+        $("cp-reason").value = "";
+        $("cp-msg").textContent = ""; $("cp-msg").className = "msg";
+        $("cp-strength").classList.add("hidden");
+        $("cp-candidates").innerHTML = "";
+        cpModal.classList.add("show");
+        setTimeout(() => $("cp-secret").focus(), 50);
+      }
+      function closeChangeModal() { cpModal.classList.remove("show"); }
+      $("cp-cancel").addEventListener("click", closeChangeModal);
+      cpModal.addEventListener("click", (e) => { if (e.target === cpModal) closeChangeModal(); });
+
+      // cp 길이 슬라이더
+      (() => { const el = $("cp-len"), out = $("cp-len-val"); const sync = () => out.textContent = el.value; el.addEventListener("input", sync); sync(); })();
+
+      // cp 라이브 강도
+      let cpStrengthTimer = null;
+      async function updateCpStrength(v) {
+        const box = $("cp-strength"); const label = $("cp-strength-label");
+        if (!v) { box.classList.add("hidden"); return; }
+        try {
+          const s = await invoke("estimate_strength", { password: v });
+          box.className = `strength s${s.score}`;
+          box.classList.remove("hidden");
+          label.textContent = s.label;
+        } catch (_) {}
+      }
+      $("cp-secret").addEventListener("input", (e) => {
+        clearTimeout(cpStrengthTimer);
+        const v = e.target.value;
+        cpStrengthTimer = setTimeout(() => updateCpStrength(v), 150);
+      });
+
+      // cp 빠른 생성: 기본 정책 + 길이만 사용자 지정
+      $("cp-gen-btn").addEventListener("click", async () => {
+        const policy = {
+          name: "cp",
+          length: parseInt($("cp-len").value, 10),
+          lower: true, upper: true, digit: true, symbol: true,
+          symbol_set: null, exclude_chars: "",
+          require_each_class: true, readable: true,
+          max_repeat: 2, dictionary_block: true,
+          mode: { kind: "Random" },
+        };
+        try {
+          const items = await invoke("generate_passwords", { policy, count: 5 });
+          const box = $("cp-candidates"); box.innerHTML = "";
+          for (const c of items) {
+            const row = document.createElement("div"); row.className = "candidate";
+            row.innerHTML = `
+              <div>
+                <div class="pw">${escapeHtml(c.password)}</div>
+                <div class="strength s${c.strength.score}" style="margin-top:4px"><div class="bar"><span></span></div><span>${escapeHtml(c.strength.label)}</span></div>
+              </div>
+              <button type="button" class="btn-ghost apply">사용</button>
+            `;
+            row.querySelector(".apply").onclick = () => {
+              $("cp-secret").value = c.password;
+              updateCpStrength(c.password);
+            };
+            box.appendChild(row);
+          }
+        } catch (e) { toast(String(e), "err"); }
+      });
+
+      $("cp-save").addEventListener("click", async () => {
+        if (!currentEntry) return;
+        const m = $("cp-msg"); m.textContent = ""; m.className = "msg";
+        const secret = $("cp-secret").value;
+        const reason = $("cp-reason").value.trim() || null;
+        if (!secret) { setMsgErr(m, "새 패스워드를 입력해 주세요."); return; }
+        try {
+          const newV = await invoke("update_secret", {
+            entryId: currentEntry.id, newSecret: secret, reason,
+          });
+          $("cp-secret").value = "";
+          closeChangeModal();
+          toast(`v${newV}로 변경되었습니다`, "ok");
+          await refreshList();
+          if (currentEntry) await loadVersions(currentEntry.id);
+        } catch (e) { setMsgErr(m, String(e)); }
+      });
+
+      // ============================================================ shortcuts
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") { closeModal(); return; }
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "l") {
+          e.preventDefault(); $("lock-now-btn")?.click();
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "n") {
+          if (!$("view-unlocked").classList.contains("hidden")) { e.preventDefault(); openModal(); }
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") {
+          if (!$("view-unlocked").classList.contains("hidden")) { e.preventDefault(); $("search").focus(); }
+        }
+      });
+      $("lock-pw").addEventListener("keydown", (e) => { if (e.key === "Enter") $("lock-btn").click(); });
+      $("setup-pw2").addEventListener("keydown", (e) => { if (e.key === "Enter") $("setup-btn").click(); });
+      $("m-secret").addEventListener("keydown", (e) => { if (e.key === "Enter") $("m-save").click(); });
+
+      // ============================================================ 테마 (auto / light / dark)
+      const THEME_KEY = "boxpassword.theme";
+      function getThemePref() { return localStorage.getItem(THEME_KEY) || "auto"; }
+      function setThemePref(p) { localStorage.setItem(THEME_KEY, p); applyTheme(p); }
+      function applyTheme(pref) {
+        const sys = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        const effective = pref === "auto" ? sys : pref;
+        document.documentElement.setAttribute("data-theme", effective);
+        $("theme-icon-dark").classList.toggle("hidden", pref !== "dark");
+        $("theme-icon-light").classList.toggle("hidden", pref !== "light");
+        $("theme-icon-auto").classList.toggle("hidden", pref !== "auto");
+        const btn = $("theme-btn");
+        if (btn) btn.title = `테마: ${pref === "auto" ? "시스템 설정 추종" : pref === "light" ? "라이트" : "다크"} (클릭하여 전환)`;
+      }
+      function cycleTheme() {
+        const cur = getThemePref();
+        const next = cur === "auto" ? "light" : cur === "light" ? "dark" : "auto";
+        setThemePref(next);
+        toast(`테마: ${next === "auto" ? "시스템 설정 추종" : next === "light" ? "라이트" : "다크"}`, "ok");
+      }
+      applyTheme(getThemePref());
+      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+        if (getThemePref() === "auto") applyTheme("auto");
+      });
+      $("theme-btn").addEventListener("click", cycleTheme);
+
+      // ============================================================ 시스템 알림
+      async function ensureNotificationPermission() {
+        try {
+          const n = window.__TAURI__?.notification;
+          if (!n) return false;
+          let granted = await n.isPermissionGranted();
+          if (!granted) {
+            const r = await n.requestPermission();
+            granted = r === "granted";
+          }
+          return granted;
+        } catch (_) { return false; }
+      }
+      async function notify(title, body) {
+        if (!prefs.notifications) return;
+        try {
+          const n = window.__TAURI__?.notification;
+          if (!n) return;
+          if (!(await n.isPermissionGranted())) {
+            const r = await n.requestPermission();
+            if (r !== "granted") return;
+          }
+          n.sendNotification({ title, body });
+        } catch (_) {}
+      }
+
+      // ============================================================ 트레이/시스템 이벤트 수신
+      if (window.__TAURI__?.event?.listen) {
+        const { listen } = window.__TAURI__.event;
+        listen("bp:status-changed", () => {
+          selectedId = null;
+          refreshStatus();
+        }).catch(() => {});
+        listen("bp:clipboard-cleared", () => {
+          stopClipboardPill();
+          toast("클립보드를 비웠습니다", "ok");
+        }).catch(() => {});
+        listen("bp:system-resumed", async (event) => {
+          if (!prefs.lockOnSleep) return;
+          if (!isUnlockedView()) return;
+          try {
+            await invoke("lock_vault");
+            selectedId = null;
+            await refreshStatus();
+            toast("시스템 복귀 감지 → 자동 잠금", "ok");
+            notify("BoxPassword", `시스템 슬립 (${event.payload}초) 감지로 자동 잠금되었습니다.`);
+          } catch (_) {}
+        }).catch(() => {});
+      }
+
+      refreshStatus();
+    </script>
+  </body>
+</html>

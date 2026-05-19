@@ -1,0 +1,15 @@
+[package]
+name = "bp-otp"
+description = "OTP provider abstraction (BoxOTP integration seam) for BoxPassword"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish.workspace = true
+
+[dependencies]
+bp-core = { path = "../bp-core" }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
