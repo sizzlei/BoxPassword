@@ -2025,7 +2025,12 @@
         } catch { return { ...DEFAULT_PREFS }; }
       }
       function savePrefs(p) {
-        try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch {}
+        try {
+          localStorage.setItem(PREFS_KEY, JSON.stringify(p));
+        } catch (e) {
+          console.error("[BoxPassword] savePrefs failed:", e);
+          toast("설정 저장 실패: " + (e?.message || e), "err");
+        }
       }
       let prefs = loadPrefs();
 
@@ -2080,6 +2085,8 @@
       // ============================================================ 설정 모달
       const setModal = $("modal-settings");
       async function openSettings() {
+        // 모달 열 때마다 디스크에서 최신 prefs 재로딩 — 다른 세션/창에서의 변경 반영.
+        prefs = loadPrefs();
         $("set-autolock").value = String(prefs.autoLockMs);
         $("set-lockonblur").checked = prefs.lockOnBlur;
         $("set-locksleep").checked = prefs.lockOnSleep;
@@ -2120,18 +2127,26 @@
         try {
           if (e.target.checked) {
             await invoke("keychain_save_current");
+            // 저장 직후 검증 — 실제로 keychain 에 항목이 들어갔는지 확인.
+            const verified = await invoke("keychain_has");
+            if (!verified) {
+              throw new Error("저장은 성공한 것으로 보이지만 keychain 에 항목이 확인되지 않습니다. macOS 권한 다이얼로그에서 '거부'를 누르셨거나, 자격 증명 저장소 접근이 차단된 상태입니다.");
+            }
             m.textContent = "Keychain 에 vault key 저장됨 — 다음 실행부터 자동 잠금 해제";
             m.className = "msg ok";
+            console.log("[BoxPassword] keychain saved and verified");
             notify("BoxPassword", "Keychain 자동 잠금 해제가 활성화되었습니다");
           } else {
             await invoke("keychain_clear");
             m.textContent = "Keychain 항목이 삭제되었습니다";
             m.className = "msg ok";
+            console.log("[BoxPassword] keychain cleared");
             notify("BoxPassword", "Keychain 자동 잠금 해제가 비활성화되었습니다");
           }
         } catch (err) {
+          console.error("[BoxPassword] keychain toggle failed:", err);
           e.target.checked = !e.target.checked;  // 롤백
-          m.textContent = String(err);
+          m.textContent = "Keychain 오류: " + String(err);
           m.className = "msg err";
         }
       });

@@ -5,8 +5,9 @@
 마스터 비밀번호 외에는 어떤 비밀도 평문으로 보관하지 않는, 변경 이력·백업·복구·TOTP까지
 1급 시민으로 다루는 로컬 우선(local-first) 패스워드 매니저입니다.
 
-자세한 기능 목록은 [`docs/FEATURES.md`](./docs/FEATURES.md),
-초기 설계는 [`BoxPassword_Design.docx`](./BoxPassword_Design.docx) 참고.
+- 처음 사용자 → [`docs/USER_GUIDE.md`](./docs/USER_GUIDE.md) (단계별 가이드 + 스크린샷)
+- 기능 레퍼런스 → [`docs/FEATURES.md`](./docs/FEATURES.md)
+- 초기 설계 → [`BoxPassword_Design.docx`](./BoxPassword_Design.docx)
 
 ---
 

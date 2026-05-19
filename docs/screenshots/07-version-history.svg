@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="1280" height="800" font-family='-apple-system, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif'>
+  <rect width="1280" height="800" fill="#0d1117"/>
+  <rect x="40" y="40" width="1200" height="720" rx="18" ry="18" fill="#161c25" stroke="#2a3340" stroke-width="2"/>
+  <!-- traffic lights -->
+  <circle cx="64" cy="64" r="6" fill="#ff5f56"/>
+  <circle cx="84" cy="64" r="6" fill="#ffbd2e"/>
+  <circle cx="104" cy="64" r="6" fill="#27c93f"/>
+  <!-- number -->
+  <text x="80" y="240" font-size="140" font-weight="800" fill="#ef4d4d" letter-spacing="-3">07</text>
+  <!-- title -->
+  <text x="80" y="300" font-size="36" font-weight="700" fill="#e8edf3">변경 이력</text>
+  <!-- placeholder label -->
+  <text x="80" y="346" font-size="20" fill="#ef4d4d">[ 스크린샷 자리표시 ]</text>
+  <!-- hint lines -->
+  <text x="80" y="400" font-size="22" fill="#8c97a3">비번을 두 번 이상 바꾼 항목의 상세 하단.</text>
+  <text x="80" y="436" font-size="22" fill="#8c97a3">버전 이력 카드에 v3 / v2 / v1 행과</text>
+  <text x="80" y="472" font-size="22" fill="#8c97a3">복원(↶) 버튼이 보여야 함.</text>
+  <!-- footer -->
+  <text x="80" y="740" font-size="16" fill="#5e6773">이 SVG 를 실제 PNG 스크린샷으로 교체하세요. (파일명 유지 권장)</text>
+</svg>
