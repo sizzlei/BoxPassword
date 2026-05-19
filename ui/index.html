@@ -2094,7 +2094,19 @@
         $("set-clipboard").value = String(prefs.clipboardMs);
         $("set-msg").textContent = ""; $("set-msg").className = "msg";
         // Keychain 토글의 실제 상태는 OS keychain 항목 유무로 판단.
-        try { $("set-keychain").checked = await invoke("keychain_has"); } catch (_) { $("set-keychain").checked = false; }
+        // keychain_status 는 사유까지 함께 돌려주므로 콘솔에 찍어 디버깅에 사용.
+        try {
+          const st = await invoke("keychain_status");
+          $("set-keychain").checked = !!st.present;
+          if (!st.present && st.reason) {
+            console.log("[BoxPassword] keychain_status: not present —", st.reason);
+          } else if (st.present) {
+            console.log("[BoxPassword] keychain_status: present");
+          }
+        } catch (e) {
+          console.error("[BoxPassword] keychain_status failed:", e);
+          $("set-keychain").checked = false;
+        }
         setModal.classList.add("show");
       }
       function closeSettings() { setModal.classList.remove("show"); }
@@ -2127,10 +2139,15 @@
         try {
           if (e.target.checked) {
             await invoke("keychain_save_current");
-            // 저장 직후 검증 — 실제로 keychain 에 항목이 들어갔는지 확인.
-            const verified = await invoke("keychain_has");
-            if (!verified) {
-              throw new Error("저장은 성공한 것으로 보이지만 keychain 에 항목이 확인되지 않습니다. macOS 권한 다이얼로그에서 '거부'를 누르셨거나, 자격 증명 저장소 접근이 차단된 상태입니다.");
+            // 저장 직후 검증 — 사유까지 함께 받아서 콘솔로.
+            const st = await invoke("keychain_status");
+            console.log("[BoxPassword] post-save keychain_status:", st);
+            if (!st.present) {
+              throw new Error(
+                "저장은 성공한 것으로 보이지만 keychain 에 항목이 확인되지 않습니다. 사유: " +
+                  (st.reason || "(불명)") +
+                  "\nmacOS: 권한 다이얼로그에서 '거부'를 누르셨거나 ad-hoc 서명 빌드라서 ACL 이 막혔을 수 있습니다."
+              );
             }
             m.textContent = "Keychain 에 vault key 저장됨 — 다음 실행부터 자동 잠금 해제";
             m.className = "msg ok";

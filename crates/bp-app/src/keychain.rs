@@ -5,6 +5,7 @@
 //! 키는 base64 로 인코딩해 저장됩니다.
 
 use data_encoding::BASE64;
+use keyring::error::Error as KeyringError;
 
 const SERVICE: &str = "com.boxpassword.app";
 const ACCOUNT: &str = "vault-key";
@@ -17,7 +18,15 @@ pub fn save(key: &[u8]) -> Result<(), String> {
     let b64 = BASE64.encode(key);
     entry()?
         .set_password(&b64)
-        .map_err(|e| format!("keychain save: {e}"))
+        .map_err(|e| format!("keychain save: {e}"))?;
+    // 저장 직후 자체 검증 — 다음에 못 읽으면 의미가 없으므로 set 직후 get 으로 확인.
+    let verify = entry()?.get_password();
+    match verify {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!(
+            "저장은 성공한 것으로 보이나 직후 재조회 실패 ({e}). 자격 증명 저장소 접근이 차단되었거나 OS 권한 다이얼로그에서 '거부'를 누르셨을 수 있습니다."
+        )),
+    }
 }
 
 pub fn load() -> Result<Vec<u8>, String> {
@@ -36,9 +45,19 @@ pub fn clear() -> Result<(), String> {
     Ok(())
 }
 
-pub fn has_entry() -> bool {
-    match entry() {
-        Ok(e) => e.get_password().is_ok(),
-        Err(_) => false,
+/// 항목 존재 여부 + (없을 때) 사유. UI 진단용.
+pub fn has_entry_detailed() -> (bool, Option<String>) {
+    let e = match entry() {
+        Ok(e) => e,
+        Err(err) => return (false, Some(format!("Entry::new 실패: {err}"))),
+    };
+    match e.get_password() {
+        Ok(_) => (true, None),
+        Err(KeyringError::NoEntry) => (false, Some("NoEntry (저장되지 않았거나 OS가 접근을 차단)".into())),
+        Err(err) => (false, Some(format!("get_password 실패: {err}"))),
     }
+}
+
+pub fn has_entry() -> bool {
+    has_entry_detailed().0
 }

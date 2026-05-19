@@ -752,6 +752,19 @@ pub fn keychain_has(_app: AppHandle) -> bool {
     crate::keychain::has_entry()
 }
 
+/// 진단용 — 존재 여부와 사유를 함께 돌려줌. UI 콘솔에 출력해 어디서 막혔는지 확인.
+#[derive(serde::Serialize)]
+pub struct KeychainStatus {
+    pub present: bool,
+    pub reason: Option<String>,
+}
+
+#[tauri::command]
+pub fn keychain_status(_app: AppHandle) -> KeychainStatus {
+    let (present, reason) = crate::keychain::has_entry_detailed();
+    KeychainStatus { present, reason }
+}
+
 /// 현재 unlocked 상태의 vault_key를 OS Keychain 에 저장합니다.
 /// 첫 호출 시 OS 가 권한 다이얼로그를 띄울 수 있습니다.
 #[tauri::command]

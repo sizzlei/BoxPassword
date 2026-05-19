@@ -402,6 +402,7 @@ fn main() {
             commands::import_csv,
             commands::change_master_password,
             commands::keychain_has,
+            commands::keychain_status,
             commands::keychain_save_current,
             commands::keychain_clear,
             commands::keychain_try_unlock,

@@ -69,8 +69,23 @@ cd crates\bp-app; cargo tauri dev          # 개발 모드
 
 ### CI (GitHub Actions)
 
-`.github/workflows/build.yml` 이 PR / 푸시 시 lint + test 를, 태그 `v*` 푸시 또는 수동 실행 시
-macOS(Apple Silicon + Intel) + Windows x64 산출물을 자동 빌드하고 Release 에 첨부합니다.
+`.github/workflows/build.yml` 은 **태그 `v*` 푸시** 또는 **Actions 화면에서 수동 실행** 일 때만
+동작합니다. 일반 커밋·PR 에서는 워크플로 자체가 시작되지 않습니다.
+
+태그를 만나면:
+1. lint(informational) + 라이브러리 크레이트 단위 테스트
+2. 태그(`vX.Y.Z`)에서 SemVer 를 추출해 `Cargo.toml` 워크스페이스 버전과
+   `crates/bp-app/tauri.conf.json` 의 `version` 을 빌드 직전에 덮어씀
+3. macOS Apple Silicon (`aarch64-apple-darwin`) + Windows x64 산출물 (.dmg / .msi / -setup.exe) 빌드
+4. GitHub Release 를 자동 생성해 산출물 첨부
+
+릴리스 절차 한 줄 요약:
+
+```bash
+git tag v0.1.1
+git push origin v0.1.1
+# → Actions 탭에서 진행 상황 확인, 완료되면 Releases 페이지에 자동 게시
+```
 
 ## 디렉터리 구조
 

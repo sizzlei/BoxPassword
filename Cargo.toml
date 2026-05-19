@@ -57,7 +57,12 @@ tauri-plugin-global-shortcut = "2"
 csv = "1"
 
 # --- OS Keychain ---
-keyring = "3"
+# macOS / Windows 네이티브 백엔드를 명시적으로 활성화.
+# (BoxPassword 는 데스크톱 macOS / Windows 만 타깃이라 Linux secret-service 는 끔.)
+keyring = { version = "3", default-features = false, features = [
+    "apple-native",
+    "windows-native",
+] }
 
 # --- 강도 평가 ---
 zxcvbn = "3"

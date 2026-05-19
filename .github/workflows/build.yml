@@ -76,6 +76,45 @@ jobs:
         with:
           node-version: "20"
 
+      # ────────────────────────────────────────────────
+      # 태그(v*)에서 SemVer 부분만 추출해 Cargo.toml / tauri.conf.json 의
+      # version 을 빌드 직전에 덮어씁니다. workflow_dispatch 처럼 태그가
+      # 없는 경우엔 기존 파일 값을 그대로 사용.
+      # ────────────────────────────────────────────────
+      - name: Inject version from tag
+        shell: bash
+        run: |
+          set -e
+          REF="${GITHUB_REF##*/}"
+          if [[ "$REF" =~ ^v([0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.+-]+)?)$ ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+            echo "Injecting version: $VERSION (from tag $REF)"
+            VERSION="$VERSION" python3 - <<'PY'
+          import os, re
+          v = os.environ["VERSION"]
+          for path in ["Cargo.toml", "crates/bp-app/tauri.conf.json"]:
+              with open(path, "r", encoding="utf-8") as f:
+                  src = f.read()
+              if path.endswith(".toml"):
+                  # [workspace.package] 블록 안의 첫 version = "..." 만 교체.
+                  src = re.sub(
+                      r'(\[workspace\.package\][^\[]*?version\s*=\s*")[^"]*(")',
+                      r'\g<1>' + v + r'\g<2>',
+                      src,
+                      count=1,
+                      flags=re.S,
+                  )
+              else:
+                  # tauri.conf.json 최상단 "version": "..." 한 곳만.
+                  src = re.sub(r'("version"\s*:\s*")[^"]*(")', r'\g<1>' + v + r'\g<2>', src, count=1)
+              with open(path, "w", encoding="utf-8") as f:
+                  f.write(src)
+              print(f"  patched {path}")
+          PY
+          else
+            echo "No version tag detected (ref=$REF) — keeping Cargo.toml / tauri.conf.json as-is."
+          fi
+
       - name: Install tauri-cli
         run: cargo install tauri-cli --version "^2" --locked
 
