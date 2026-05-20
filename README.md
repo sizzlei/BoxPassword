@@ -122,39 +122,6 @@ BoxPassword/
 | ⌘L | Vault 잠그기 |
 | Esc | 모달/팝오버 닫기 |
 
-## 마일스톤
-
-| ID | 산출물 | 상태 |
-|---|---|---|
-| M0 | Cargo 워크스페이스 + Tauri 셸 | ✅ |
-| M1 | Argon2id + AES-GCM 봉인, 파일 vault, 잠금/해제, 항목 CRUD | ✅ |
-| M2 | 검색/정렬, 자동 잠금, 클립보드 zeroize, 즐겨찾기 | ✅ |
-| M3 | 변경 이력 UI + 롤백 + 자동 입력 (enigo) | ✅ |
-| M4 | 패스워드 생성기 / zxcvbn 강도 | ✅ |
-| M5 | `.bpvault` 백업 / 복구 | ✅ |
-| M6 | TOTP 자체 구현 (BoxOTP 스펙 도착 시 외부 연동) | ✅ |
-| ★  | 그룹, 건강 검진, 트레이, Quick Search, 마스터 변경, 메모 | ✅ |
-| M7 | 코드사인 + 자동 업데이트 (Apple Developer 계정 필요) | ⏳ |
-
-## 테스트
-
-```bash
-cargo test --workspace        # 모든 단위/통합 테스트
-cargo clippy --workspace --all-targets -- -D warnings
-cargo fmt --check
-```
-
-주요 테스트:
-- `bp-crypto`: KDF 결정성, AEAD 라운드트립/변조/오답 키, TOTP RFC 6238 벡터
-- `bp-storage`: 초기화 → 잠금 해제 → 항목 CRUD → 버전 → 즐겨찾기 → 노트/TOTP → 마스터 변경 → 백업 라운드트립
-
-## 보안 가정
-
-- 마스터 비밀번호는 충분한 강도여야 한다(zxcvbn 3+ 권장)
-- macOS 키체인이나 OS 보안 저장소를 사용하지 않는다 — vault 파일은 사용자의 책임
-- 시스템 메모리/스왑은 신뢰한다 — 디스크 암호화(FileVault) 필수
-- 자동 입력은 손쉬운 사용 권한이 켜진 상태를 가정
-
 ## 라이선스
 
 MIT — [`LICENSE`](./LICENSE) 참고.
